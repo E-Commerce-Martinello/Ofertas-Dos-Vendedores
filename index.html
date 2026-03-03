@@ -403,7 +403,7 @@
         
         <div class="input-group">
             <i class="fas fa-tag input-icon"></i>
-            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!">
+            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)">
         </div>
         
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
@@ -460,6 +460,21 @@ Corre porque é só até dia 16!`,
     suporteWhatsApp: "556598115091",
     mensagemSuporte: "Olá! Preciso de ajuda."
 };
+
+// ============================================
+// NOVA FUNÇÃO: VALIDAR E LIMPAR MATRÍCULA
+// ============================================
+
+function validarMatricula(input) {
+    // Remove qualquer caractere que não seja número
+    let valor = input.value.replace(/\D/g, '');
+    
+    // Remove zeros à esquerda
+    valor = valor.replace(/^0+/, '');
+    
+    // Atualiza o valor no input
+    input.value = valor;
+}
 
 // ============================================
 // OTIMIZAÇÕES - PREVENIR ERROS
@@ -555,20 +570,28 @@ async function enviar() {
         console.log("⏳ Já está processando, aguarde...");
         return;
     }
-    enviando = true;
     
     try {
-        const codInput = document.getElementById('cod').value.trim().toUpperCase();
+        const codInput = document.getElementById('cod').value.trim();
+        
+        // Validação: não permite campo vazio
         if(!codInput) { 
-            alert("Por favor, digite o código!"); 
+            alert("Por favor, digite sua matrícula!"); 
+            return; 
+        }
+        
+        // Validação: não permite apenas zeros
+        if(codInput === '') { 
+            alert("Matrícula inválida!"); 
             return; 
         }
 
+        enviando = true;
         setLoading(true);
 
         const navegador = getBrowserName();
         
-        // Monta o link final com o código do vendedor
+        // Monta o link final com o código do vendedor (já limpo dos zeros à esquerda)
         const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(CONFIG.urlProduto)}`;
         
         // Substitui [LINK] e [CODIGO] no texto
@@ -635,6 +658,7 @@ async function enviar() {
                     });
                     console.log("✅ Compartilhamento realizado com sucesso");
                     setLoading(false);
+                    enviando = false;
                     return;
                 } else {
                     throw new Error('Web Share não suporta arquivos');
@@ -650,7 +674,11 @@ async function enviar() {
         }
         
         setLoading(false);
-    } finally {
+        enviando = false;
+    } catch (error) {
+        console.error("Erro no processo:", error);
+        alert("Ocorreu um erro. Tente novamente.");
+        setLoading(false);
         enviando = false;
     }
 }
