@@ -246,22 +246,6 @@ const AdminPresenter = {
         ok ? UI.ok('Oferta salva e sincronizada!') : UI.ok('Oferta salva localmente (Firebase offline)');
     },
 
-
-    // ── EXPORTAR JSON FALLBACK ───────────────
-    // Baixa ofertas.json para subir no GitHub como fallback
-    exportarJsonFallback() {
-        const json = JSON.stringify(this.ofertas, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = 'ofertas.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        console.log('📥 ofertas.json baixado — suba no GitHub para ativar o fallback');
-        UI.ok('ofertas.json baixado! Suba no GitHub.');
-    },
-
     excluirOferta(idx) {
         if (!confirm('Excluir esta oferta?')) return;
         console.log(`🗑️ Excluindo oferta [${idx}]:`, this.ofertas[idx]?.tituloPagina);
@@ -383,4 +367,3 @@ function cancelarEdicao()     { AdminPresenter.cancelarEdicao(); }
 function salvarOferta()       { AdminPresenter.salvarOferta(); }
 function salvarConfigPadrao() { AdminPresenter.salvarConfigEmBreve(); }
 function removerImagem()      { AdminPresenter._removerImagem(); }
-function exportarJson()       { AdminPresenter.exportarJsonFallback(); }
