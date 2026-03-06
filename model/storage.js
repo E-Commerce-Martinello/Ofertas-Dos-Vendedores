@@ -4,36 +4,36 @@
 
 const Storage = {
 
-    _salvando: false, // BUG FIX: flag para não sobrescrever durante save
+    _salvando: false,
 
     // ---------- OFERTAS ----------
 
     async carregarOfertas() {
-        // BUG FIX: não buscar Firebase enquanto um save está em andamento
-        // (evita race condition: save → Firebase demora → carregarOfertas sobrescreve)
         if (this._salvando) {
+            console.log('⏳ Save em andamento — usando localStorage');
             const local = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
             this._atualizarAtiva(local);
             return local;
         }
 
         try {
+            console.log('📡 Buscando ofertas no Firebase...');
             const snap  = await ofertasRef.once('value');
             const dados = snap.val();
             const arr   = Array.isArray(dados) ? dados
                         : dados && typeof dados === 'object' ? Object.values(dados)
                         : [];
 
-            // BUG FIX: só atualiza localStorage se Firebase retornou dados
-            // Isso evita apagar dados recém-salvos caso o Firebase retorne vazio
+            console.log(`✅ ${arr.length} oferta(s) carregada(s) do Firebase`);
+
             if (arr.length > 0 || dados !== null) {
                 localStorage.setItem('ofertasMartinello', JSON.stringify(arr));
             }
 
             this._atualizarAtiva(arr);
             return arr;
-        } catch {
-            // Firebase offline/indisponível — usar localStorage como fallback
+        } catch (e) {
+            console.warn('⚠️ Firebase indisponível — usando localStorage:', e.message);
             const local = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
             this._atualizarAtiva(local);
             return local;
@@ -41,19 +41,19 @@ const Storage = {
     },
 
     async salvarOfertas(ofertas) {
-        // 1. Salvar no localStorage IMEDIATAMENTE (fonte de verdade local)
+        console.log('💾 Salvando', ofertas.length, 'oferta(s)...');
         localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
         this._atualizarAtiva(ofertas);
 
-        // 2. Tentar sincronizar com Firebase
         this._salvando = true;
         try {
             await ofertasRef.set(ofertas);
             this._salvando = false;
+            console.log('☁️ Sincronizado com Firebase!');
             return true;
         } catch (e) {
-            console.warn('Firebase offline — salvo apenas localmente:', e.message);
             this._salvando = false;
+            console.warn('⚠️ Firebase offline — salvo apenas localmente:', e.message);
             return false;
         }
     },
@@ -63,8 +63,10 @@ const Storage = {
         const ativa = ofertas.find(o => isOfertaAtiva(o, agora)) || null;
         if (ativa) {
             localStorage.setItem('ofertaAtiva', JSON.stringify(ativa));
+            console.log('🟢 Oferta ativa:', ativa.tituloPagina);
         } else {
             localStorage.removeItem('ofertaAtiva');
+            console.log('⏸️ Nenhuma oferta ativa no momento');
         }
         return ativa;
     },
@@ -74,7 +76,11 @@ const Storage = {
             const raw = localStorage.getItem('ofertaAtiva');
             if (!raw) return null;
             const oferta = JSON.parse(raw);
-            if (isOfertaAtiva(oferta, getHorarioBrasilia())) return oferta;
+            if (isOfertaAtiva(oferta, getHorarioBrasilia())) {
+                console.log('⚡ Oferta carregada do cache:', oferta.tituloPagina);
+                return oferta;
+            }
+            console.log('⌛ Oferta do cache expirou — removendo');
             localStorage.removeItem('ofertaAtiva');
             return null;
         } catch { return null; }
@@ -89,6 +95,7 @@ const Storage = {
 
     salvarConfigEmBreve(config) {
         localStorage.setItem('configTelaEmBreve', JSON.stringify(config));
+        console.log('💾 Config "Em Breve" salva');
     },
 
     // ---------- PREFERÊNCIAS ----------

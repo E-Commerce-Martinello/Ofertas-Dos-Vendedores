@@ -9,18 +9,18 @@ const AdminPresenter = {
     intervaloStatus: null,
     timerBloqueio: null,
 
-    // ── INICIALIZAÇÃO ───────────────────────
-
     async init() {
+        console.log('🔐 Admin iniciando...');
         UI.tema.aplicar(Storage.carregarTema());
 
         if (Auth.sessaoValida()) {
+            console.log('✅ Sessão válida — abrindo painel');
             await this._abrirPainel();
         } else {
+            console.log('🔒 Sem sessão — exibindo login');
             this._mostrarLogin();
         }
 
-        // Enter no campo de senha
         document.getElementById('senhaInput')
             ?.addEventListener('keydown', e => { if (e.key === 'Enter') this.login(); });
     },
@@ -30,8 +30,6 @@ const AdminPresenter = {
     _mostrarLogin() {
         document.getElementById('loginBox').style.display    = 'block';
         document.getElementById('painelAdmin').style.display = 'none';
-
-        // Verificar se está bloqueado ao carregar
         if (Auth.estaBloqueado()) this._iniciarTimerBloqueio();
     },
 
@@ -42,13 +40,17 @@ const AdminPresenter = {
         }
 
         const senha = document.getElementById('senhaInput').value;
-        const res   = await Auth.verificarSenha(senha);
+        console.log('🔑 Tentativa de login...');
+        const res = await Auth.verificarSenha(senha);
 
         if (res.ok) {
+            console.log('✅ Login bem-sucedido');
             await this._abrirPainel();
         } else if (res.bloqueado) {
+            console.warn('🚫 Conta bloqueada por excesso de tentativas');
             this._iniciarTimerBloqueio();
         } else {
+            console.warn(`❌ Senha incorreta — ${res.restantes} tentativa(s) restante(s)`);
             const msg = res.restantes > 0
                 ? `Senha incorreta. ${res.restantes} tentativa(s) restante(s).`
                 : `Bloqueado por ${Math.ceil(CONFIG.BLOQUEIO_MS / 60000)} minutos.`;
@@ -80,6 +82,7 @@ const AdminPresenter = {
     },
 
     logout() {
+        console.log('👋 Logout realizado');
         Auth.logout();
         clearInterval(this.intervaloStatus);
         this._mostrarLogin();
@@ -92,12 +95,13 @@ const AdminPresenter = {
         document.getElementById('painelAdmin').style.display = 'block';
 
         this.ofertas = await Storage.carregarOfertas();
+        console.log(`📋 ${this.ofertas.length} oferta(s) carregada(s)`);
         this.renderLista();
         this._carregarConfigEmBreve();
         this._setupDragDrop();
 
-        // Auto-atualizar lista a cada 5s
         this.intervaloStatus = setInterval(() => this.renderLista(), 5000);
+        console.log('✅ Painel admin pronto!');
     },
 
     // ── LISTA DE OFERTAS ─────────────────────
@@ -107,10 +111,11 @@ const AdminPresenter = {
         const con   = document.getElementById('listaOfertas');
         if (!con) return;
 
-        // Banner de alerta quando não há oferta ativa
-        const banner = document.getElementById('bannerSemOferta');
+        const banner   = document.getElementById('bannerSemOferta');
         const temAtiva = this.ofertas.some(o => isOfertaAtiva(o, agora));
         if (banner) banner.style.display = temAtiva ? 'none' : 'block';
+
+        if (!temAtiva) console.warn('⚠️ Nenhuma oferta ativa no momento!');
 
         if (this.ofertas.length === 0) {
             con.innerHTML = `<div class="empty-state">
@@ -167,6 +172,7 @@ const AdminPresenter = {
     editarOferta(idx) {
         const o = this.ofertas[idx];
         if (!o) { UI.erro('Oferta não encontrada'); return; }
+        console.log(`✏️ Editando oferta [${idx}]:`, o.tituloPagina);
 
         document.getElementById('formTitulo').innerHTML     = '✏️ EDITAR OFERTA';
         document.getElementById('editandoIdx').value        = idx;
@@ -192,11 +198,12 @@ const AdminPresenter = {
         document.getElementById('formNovaOferta').style.display = 'none';
         document.getElementById('editandoIdx').value = '';
         this._removerImagem();
+        console.log('↩️ Edição cancelada');
     },
 
     async salvarOferta() {
-        const idx    = document.getElementById('editandoIdx').value;
-        const dados  = {
+        const idx   = document.getElementById('editandoIdx').value;
+        const dados = {
             dataInicio:   document.getElementById('dataInicio').value,
             dataFim:      document.getElementById('dataFim').value,
             linkProduto:  document.getElementById('linkProduto').value,
@@ -204,23 +211,29 @@ const AdminPresenter = {
             tituloPagina: document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
         };
 
-        const val = Validators.oferta(dados, this.ofertas, idx !== '' ? parseInt(idx) : null);
-        if (!val.valido) { UI.erro(val.erros[0]); return; }
+        console.log(`💾 Salvando oferta${idx !== '' ? ` [edição idx ${idx}]` : ' [nova]'}...`);
 
-        // Imagem
+        const val = Validators.oferta(dados, this.ofertas, idx !== '' ? parseInt(idx) : null);
+        if (!val.valido) {
+            console.warn('❌ Validação falhou:', val.erros);
+            UI.erro(val.erros[0]);
+            return;
+        }
+
         const fi = document.getElementById('fileInput');
         let urlImagem = idx !== '' ? this.ofertas[parseInt(idx)].urlImagem : '';
         if (fi.files?.[0]) {
             const vImg = Validators.imagem(fi.files[0]);
             if (!vImg.valido) { UI.erro(vImg.erro); return; }
+            console.log('🖼️ Convertendo imagem para base64...');
             urlImagem = await UI.paraBase64(fi.files[0]);
         }
 
         const oferta = {
-            id:           idx !== '' ? this.ofertas[parseInt(idx)].id : Date.now(),
+            id:          idx !== '' ? this.ofertas[parseInt(idx)].id : Date.now(),
             ...dados,
             urlImagem,
-            dataCriacao:  new Date().toISOString(),
+            dataCriacao: new Date().toISOString(),
         };
 
         if (idx !== '') this.ofertas[parseInt(idx)] = oferta;
@@ -234,6 +247,7 @@ const AdminPresenter = {
 
     excluirOferta(idx) {
         if (!confirm('Excluir esta oferta?')) return;
+        console.log(`🗑️ Excluindo oferta [${idx}]:`, this.ofertas[idx]?.tituloPagina);
         this.ofertas.splice(idx, 1);
         Storage.salvarOfertas(this.ofertas);
         this.renderLista();
@@ -244,12 +258,11 @@ const AdminPresenter = {
 
     _atualizarPreview() {
         const titulo = document.getElementById('tituloPagina')?.value || 'EM BREVE';
-        const prev   = document.getElementById('previewCard');
         const img    = document.getElementById('preview');
-        if (!prev) return;
-        document.getElementById('previewCardTitulo').textContent = titulo;
-        document.getElementById('previewCardImg').src = img?.src && img.style.display !== 'none'
-            ? img.src : 'img/produto.png';
+        const cardT  = document.getElementById('previewCardTitulo');
+        const cardI  = document.getElementById('previewCardImg');
+        if (cardT) cardT.textContent = titulo;
+        if (cardI) cardI.src = img?.src && img.style.display !== 'none' ? img.src : 'img/produto.png';
     },
 
     // ── CONFIG EM BREVE ──────────────────────
@@ -278,13 +291,14 @@ const AdminPresenter = {
     _carregarConfigEmBreve() {
         const cfg = Storage.carregarConfigEmBreve();
         if (!cfg) return;
+        console.log('⚙️ Config "Em Breve" carregada');
         if (cfg.imagem && cfg.imagem !== 'img/produto.png')
             document.getElementById('previewPadrao').src = cfg.imagem;
         if (cfg.titulo)   document.getElementById('tituloPadrao').value   = cfg.titulo;
         if (cfg.mensagem) document.getElementById('mensagemPadrao').value = cfg.mensagem;
     },
 
-    // ── DRAG & DROP IMAGENS ──────────────────
+    // ── DRAG & DROP ──────────────────────────
 
     _setupDragDrop() {
         this._bindDrop('dropArea',       'fileInput',  'preview',       'btnRemoverImagem', false);
@@ -345,11 +359,10 @@ const AdminPresenter = {
 // ── BOOTSTRAP ────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => AdminPresenter.init());
 
-// Expostos para onclick="" no HTML
-function login()                { AdminPresenter.login(); }
-function logout()               { AdminPresenter.logout(); }
-function mostrarNovaOferta()    { AdminPresenter.mostrarNovaOferta(); }
-function cancelarEdicao()       { AdminPresenter.cancelarEdicao(); }
-function salvarOferta()         { AdminPresenter.salvarOferta(); }
-function salvarConfigPadrao()   { AdminPresenter.salvarConfigEmBreve(); }
-function removerImagem()        { AdminPresenter._removerImagem(); }
+function login()              { AdminPresenter.login(); }
+function logout()             { AdminPresenter.logout(); }
+function mostrarNovaOferta()  { AdminPresenter.mostrarNovaOferta(); }
+function cancelarEdicao()     { AdminPresenter.cancelarEdicao(); }
+function salvarOferta()       { AdminPresenter.salvarOferta(); }
+function salvarConfigPadrao() { AdminPresenter.salvarConfigEmBreve(); }
+function removerImagem()      { AdminPresenter._removerImagem(); }

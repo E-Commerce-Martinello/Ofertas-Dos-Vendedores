@@ -13,10 +13,10 @@ const IndexPresenter = {
     // ── INICIALIZAÇÃO ───────────────────────
 
     async init() {
-        // Tema sem flash (já aplicado no <head>; aqui só atualiza ícone)
+        console.log('🚀 Portal do Vendedor iniciando...');
+
         UI.tema.aplicar(Storage.carregarTema());
 
-        // Imagem fallback
         UI.imagemFallback(
             document.getElementById('fotoProduto'),
             this._configEmBreve().imagem
@@ -28,12 +28,12 @@ const IndexPresenter = {
             const inp = document.getElementById('cod');
             inp.value = ultima;
             this._atualizarBordaMatricula(inp);
+            console.log('↩️ Última matrícula restaurada:', ultima);
         }
 
-        // Mostrar "CARREGANDO..." imediatamente
         this._renderCarregando();
 
-        // Exibir cache ANTES do primeiro setInterval (resolve o delay de 1s)
+        // Exibir cache IMEDIATAMENTE (< 100ms)
         const cacheImediato = Storage.ofertaAtivaDoCache();
         if (cacheImediato) {
             this.ofertaAtual = cacheImediato;
@@ -43,21 +43,23 @@ const IndexPresenter = {
         // Ciclo de relógio + verificação de expiração (1s)
         this.intervalo = setInterval(() => this._tick(), 1000);
 
-        // Pausar quando aba está em background (economiza bateria/dados)
+        // Pausar quando aba está em background
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
+                console.log('👁️ Aba em background — pausando ciclo');
                 clearInterval(this.intervalo);
             } else {
-                this._syncFirebase(); // sync imediato ao voltar
+                console.log('👁️ Aba ativa novamente — sincronizando');
+                this._syncFirebase();
                 this.intervalo = setInterval(() => this._tick(), 1000);
             }
         });
 
-        // Sincronização Firebase inicial + ciclo de 30s
-        this._syncFirebase();
+        // Sync Firebase inicial + ciclo de 30s
+        await this._syncFirebase();
         setInterval(() => this._syncFirebase(), 30000);
 
-        // Efeito glow no botão
+        // Efeito glow
         setInterval(() => {
             const btn = document.getElementById('btnEnviar');
             if (btn && !btn.disabled) {
@@ -65,23 +67,23 @@ const IndexPresenter = {
                 setTimeout(() => btn.classList.remove('glow'), 1000);
             }
         }, 3000);
+
+        console.log('✅ Portal do Vendedor pronto!');
     },
 
     // ── CICLO DE 1S ─────────────────────────
 
     _tick() {
-        // Relógio
         const agora = getHorarioBrasilia();
         document.getElementById('infoHoraBrasilia').innerText = formatarBrasilia(agora);
 
-        // Expiração da oferta atual
         if (this.ofertaAtual) {
             if (!isOfertaAtiva(this.ofertaAtual, agora)) {
+                console.log('⌛ Oferta expirou — voltando para EM BREVE');
                 this.ofertaAtual = null;
-                Storage.ofertaAtivaDoCache(); // limpa cache
+                Storage.ofertaAtivaDoCache();
                 this._renderOferta(null);
             } else {
-                // Atualizar countdown
                 const cd = countdownTexto(this.ofertaAtual.dataFim);
                 const el = document.getElementById('infoCountdown');
                 if (el) el.innerText = cd ? `⏱ Encerra em ${cd}` : '';
@@ -89,7 +91,6 @@ const IndexPresenter = {
             return;
         }
 
-        // Tentar cache
         const cache = Storage.ofertaAtivaDoCache();
         if (cache) {
             this.ofertaAtual = cache;
@@ -102,6 +103,7 @@ const IndexPresenter = {
     async _syncFirebase() {
         if (this.buscando) return;
         this.buscando = true;
+        console.log('🔄 Sincronizando com Firebase...');
         try {
             const ofertas = await Storage.carregarOfertas();
             const agora   = getHorarioBrasilia();
@@ -109,6 +111,7 @@ const IndexPresenter = {
 
             if (ativa) {
                 if (!this.ofertaAtual || this.ofertaAtual.id !== ativa.id) {
+                    console.log('🆕 Nova oferta detectada:', ativa.tituloPagina);
                     this.ofertaAtual = ativa;
                     this._renderOferta(ativa);
                 }
@@ -141,11 +144,12 @@ const IndexPresenter = {
     },
 
     _renderOferta(oferta) {
-        const status  = document.getElementById('infoStatus');
-        const ofEl    = document.getElementById('infoOferta');
-        const cdEl    = document.getElementById('infoCountdown');
+        const status = document.getElementById('infoStatus');
+        const ofEl   = document.getElementById('infoOferta');
+        const cdEl   = document.getElementById('infoCountdown');
 
         if (oferta) {
+            console.log('🟢 Exibindo oferta:', oferta.tituloPagina);
             document.querySelector('h2').innerText              = oferta.tituloPagina;
             document.getElementById('fotoProduto').src          = oferta.urlImagem || 'img/produto.png';
             document.getElementById('cod').disabled             = false;
@@ -155,13 +159,12 @@ const IndexPresenter = {
             ofEl.innerText   = oferta.tituloPagina;
             status.innerHTML = '✅ OFERTA ATIVA';
             status.className = 'status-text status-ativo';
-
-            // Countdown
             if (cdEl) {
                 const cd = countdownTexto(oferta.dataFim);
                 cdEl.innerText = cd ? `⏱ Encerra em ${cd}` : '';
             }
         } else {
+            console.log('⏸️ Exibindo tela EM BREVE');
             const cfg = this._configEmBreve();
             document.querySelector('h2').innerText              = cfg.titulo;
             document.getElementById('fotoProduto').src          = cfg.imagem;
@@ -209,50 +212,35 @@ const IndexPresenter = {
         const btnText = btn.querySelector('.btn-text');
         const orig    = btnText.textContent;
 
-        this.enviando    = true;
-        btn.disabled     = true;
+        this.enviando     = true;
+        btn.disabled      = true;
         btnText.innerHTML = '<span class="spinner"></span>PROCESSANDO...';
 
         try {
             Storage.salvarUltimaMatricula(codInput);
-
             const link  = `${CONFIG.urlBase}${codInput}?redir=${encodeURIComponent(oferta.linkProduto)}`;
             const texto = formatarTexto(oferta.textoOferta, link, codInput);
             const nav   = getBrowserName();
 
+            console.log('📤 Enviando oferta — matrícula:', codInput, '| navegador:', nav);
+
             await API.rastrear(codInput, nav);
             await API.compartilhar(texto, document.getElementById('fotoProduto').src);
 
+            console.log('✅ Oferta compartilhada com sucesso!');
         } catch (e) {
-            console.error(e);
+            console.error('❌ Erro ao compartilhar:', e);
             UI.erro('Erro ao compartilhar. Tente novamente.');
         } finally {
-            btn.disabled          = false;
-            btnText.textContent   = orig;
-            this.enviando         = false;
+            btn.disabled        = false;
+            btnText.textContent = orig;
+            this.enviando       = false;
         }
-    },
-
-    // ── COPIAR LINK ─────────────────────────
-
-    async copiarLink() {
-        const oferta   = this.ofertaAtual || Storage.ofertaAtivaDoCache();
-        const codInput = document.getElementById('cod').value.trim();
-        if (!oferta)                       { UI.erro('Nenhuma oferta ativa');            return; }
-        if (!Validators.matricula(codInput)) { UI.erro('Digite sua matrícula primeiro'); return; }
-
-        const link  = `${CONFIG.urlBase}${codInput}?redir=${encodeURIComponent(oferta.linkProduto)}`;
-        const texto = formatarTexto(oferta.textoOferta, link, codInput);
-        const ok    = await API.copiarTexto(texto);
-        if (ok) UI.ok('Texto copiado!');
-        else    UI.erro('Não foi possível copiar');
     },
 };
 
 // ── BOOTSTRAP ────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => IndexPresenter.init());
 
-// Expostas para onclick="" no HTML
-function enviar()                  { IndexPresenter.enviar(); }
-function copiarLink()              { IndexPresenter.copiarLink(); }
-function validarMatricula(input)   { IndexPresenter.validarMatriculaInput(input); }
+function enviar()                { IndexPresenter.enviar(); }
+function validarMatricula(input) { IndexPresenter.validarMatriculaInput(input); }
