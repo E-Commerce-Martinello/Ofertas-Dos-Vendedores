@@ -1,321 +1,246 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello</title>
+// ============================================
+// presenter/index-presenter.js
+// Toda a lógica do portal do vendedor
+// ============================================
 
-    <!-- TEMA SEM FLASH -->
-    <script>
-        (function(){
-            var t = localStorage.getItem('tema');
-            if (t === 'dark') document.documentElement.classList.add('dark-mode-pre');
-        })();
-    </script>
-    <style> html.dark-mode-pre body { background: #1a1a1a !important; color: white; } </style>
+const IndexPresenter = {
 
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    ofertaAtual: null,
+    buscando:    false,
+    enviando:    false,
+    intervalo:   null,
 
-    <!-- Firebase -->
+    // ── INICIALIZAÇÃO ───────────────────────
 
-    <!-- MVP -->
+    async init() {
+        console.log('🚀 Portal do Vendedor iniciando...');
 
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Montserrat',sans-serif; }
+        UI.tema.aplicar(Storage.carregarTema());
 
-        body { background:linear-gradient(135deg,#f5f5f5 0%,#e0e0e0 100%); min-height:100vh; padding:15px; }
-        body.dark-mode { background:#1a1a1a; color:white; }
-        body.dark-mode .admin-card { background:#2d2d2d; border-color:#444; }
-        body.dark-mode .form-group input,
-        body.dark-mode .form-group textarea { background:#3d3d3d; color:white; border-color:#555; }
-        body.dark-mode .oferta-card { background:#333; border-color:#555; }
-        body.dark-mode .info-box { background:#1e3a5f; color:#ccc; }
+        UI.imagemFallback(
+            document.getElementById('fotoProduto'),
+            this._configEmBreve().imagem
+        );
 
-        .admin-container { max-width:900px; margin:0 auto; }
-
-        .admin-card {
-            background:white; border-radius:25px; padding:25px;
-            box-shadow:0 10px 30px rgba(208,37,42,.15);
-            margin-bottom:20px; border:1px solid transparent;
+        // Pré-preencher última matrícula
+        const ultima = Storage.carregarUltimaMatricula();
+        if (ultima) {
+            const inp = document.getElementById('cod');
+            inp.value = ultima;
+            this._atualizarBordaMatricula(inp);
+            console.log('↩️ Última matrícula restaurada:', ultima);
         }
 
-        h1 { color:#d0252a; font-weight:800; font-size:26px; border-bottom:3px solid #d0252a; padding-bottom:12px; margin-bottom:20px; }
-        h2 { color:#333; margin:20px 0 15px; font-size:20px; }
-        body.dark-mode h2 { color:#ddd; }
+        this._renderCarregando();
 
-        /* LOGIN */
-        .login-box { text-align:center; padding:30px 15px; }
-        .login-box img { max-width:180px; margin-bottom:25px; }
-        .login-box input {
-            width:100%; max-width:300px; padding:15px;
-            border:2px solid #ddd; border-radius:12px; font-size:16px; margin:15px auto; display:block;
-        }
-        .login-box button {
-            background:#d0252a; color:white; border:none; padding:15px 40px;
-            border-radius:12px; font-weight:bold; cursor:pointer; font-size:16px;
-            width:100%; max-width:300px; transition:.3s;
-        }
-        .login-box button:disabled { background:#999; cursor:not-allowed; }
-        #infoBloqueio {
-            display:none; margin-top:12px; padding:10px 15px;
-            background:#f8d7da; color:#721c24; border-radius:8px;
-            font-size:13px; max-width:300px; margin-left:auto; margin-right:auto;
+        // Exibir cache IMEDIATAMENTE (< 100ms)
+        const cacheImediato = Storage.ofertaAtivaDoCache();
+        if (cacheImediato) {
+            this.ofertaAtual = cacheImediato;
+            this._renderOferta(cacheImediato);
         }
 
-        /* FORMULÁRIOS */
-        .form-group { margin-bottom:20px; }
-        .form-group label { display:block; font-weight:bold; margin-bottom:8px; color:#333; font-size:15px; }
-        body.dark-mode .form-group label { color:#ccc; }
-        .form-group input, .form-group textarea {
-            width:100%; padding:14px; border:2px solid #ddd; border-radius:12px; font-size:16px;
-            transition:border-color .3s;
-        }
-        .form-group input:focus, .form-group textarea:focus { border-color:#d0252a; outline:none; }
+        // Ciclo de relógio + verificação de expiração (1s)
+        this.intervalo = setInterval(() => this._tick(), 1000);
 
-        .row { display:flex; flex-direction:column; gap:15px; }
-        @media (min-width:640px) {
-            .row { flex-direction:row; }
-            .row .form-group { flex:1; }
-            h1 { font-size:32px; }
-            .admin-card { padding:35px; }
-        }
+        // Pausar quando aba está em background
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('👁️ Aba em background — pausando ciclo');
+                clearInterval(this.intervalo);
+            } else {
+                console.log('👁️ Aba ativa novamente — sincronizando');
+                this._syncFirebase();
+                this.intervalo = setInterval(() => this._tick(), 1000);
+            }
+        });
 
-        /* UPLOAD */
-        .upload-area {
-            border:3px dashed #d0252a; border-radius:20px; padding:30px 20px;
-            text-align:center; background:#fff5f5; cursor:pointer;
-            transition:all .3s; margin-bottom:15px; min-height:180px;
-            display:flex; flex-direction:column; align-items:center; justify-content:center;
-        }
-        .upload-area.dragover { background:#ffe0e0; border-color:#a01d21; transform:scale(1.02); }
-        .upload-area i { font-size:48px; color:#d0252a; margin-bottom:12px; }
-        .upload-area p { font-size:16px; color:#333; margin:5px 0; }
-        .preview-image { max-width:100%; max-height:200px; margin:15px 0; border-radius:15px; border:3px solid #fff; box-shadow:0 5px 15px rgba(0,0,0,.2); }
+        // Sync Firebase inicial + ciclo de 30s
+        await this._syncFirebase();
+        setInterval(() => this._syncFirebase(), 30000);
 
-        /* BOTÕES */
-        .btn-primary   { background:#d0252a; color:white; border:none; padding:16px 20px; border-radius:50px; font-weight:bold; cursor:pointer; font-size:16px; width:100%; transition:.3s; margin-top:10px; }
-        .btn-primary:hover { background:#a01d21; }
-        .btn-secondary { background:#28a745; color:white; border:none; padding:14px 20px; border-radius:50px; font-weight:bold; cursor:pointer; font-size:15px; width:100%; }
-        .btn-warning   { background:#ffc107; color:black; border:none; padding:14px 20px; border-radius:50px; font-weight:bold; cursor:pointer; font-size:15px; width:100%; }
-        .btn-danger    { background:#dc3545; color:white; border:none; padding:14px 20px; border-radius:50px; font-weight:bold; cursor:pointer; font-size:15px; width:100%; }
-        .btn-group { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
-        @media (min-width:640px) { .btn-group { flex-direction:row; } }
+        // Efeito glow
+        setInterval(() => {
+            const btn = document.getElementById('btnEnviar');
+            if (btn && !btn.disabled) {
+                btn.classList.add('glow');
+                setTimeout(() => btn.classList.remove('glow'), 1000);
+            }
+        }, 3000);
 
-        .logout-button { background:#6c757d; color:white; border:none; padding:8px 15px; border-radius:20px; font-size:12px; cursor:pointer; margin-left:10px; }
-        .logout-button:hover { background:#5a6268; }
-        .back-button { background:none; border:none; color:#d0252a; font-size:16px; font-weight:bold; margin-bottom:15px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+        console.log('✅ Portal do Vendedor pronto!');
+    },
 
-        /* TOOLBAR */
-        .toolbar { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
-        .toolbar button { padding:8px 15px; border:none; border-radius:20px; cursor:pointer; font-weight:bold; font-size:13px; }
-        .btn-nova { background:#28a745; color:white; }
+    // ── CICLO DE 1S ─────────────────────────
 
-        /* BANNER SEM OFERTA */
-        #bannerSemOferta {
-            display:none; background:#f8d7da; color:#721c24;
-            border:2px solid #dc3545; border-radius:12px;
-            padding:14px 18px; margin-bottom:16px; font-weight:bold;
-            font-size:14px; display:flex; align-items:center; gap:10px;
+    _tick() {
+        const agora = getHorarioBrasilia();
+        document.getElementById('infoHoraBrasilia').innerText = formatarBrasilia(agora);
+
+        if (this.ofertaAtual) {
+            if (!isOfertaAtiva(this.ofertaAtual, agora)) {
+                console.log('⌛ Oferta expirou — voltando para EM BREVE');
+                this.ofertaAtual = null;
+                Storage.ofertaAtivaDoCache();
+                this._renderOferta(null);
+            } else {
+                const cd = countdownTexto(this.ofertaAtual.dataFim);
+                const el = document.getElementById('infoCountdown');
+                if (el) el.innerText = cd ? `⏱ Encerra em ${cd}` : '';
+            }
+            return;
         }
 
-        /* CARDS DE OFERTA */
-        .oferta-card { background:#f9f9f9; border:2px solid #ddd; border-radius:20px; padding:18px; margin-bottom:18px; position:relative; }
-        .oferta-card.ativa { border-color:#28a745; background:#f0fff0; }
-        .status-badge { position:absolute; top:-10px; right:15px; padding:6px 15px; border-radius:30px; font-weight:bold; font-size:12px; box-shadow:0 3px 8px rgba(0,0,0,.1); }
-        .status-ativa    { background:#28a745; color:white; }
-        .status-agendada { background:#ffc107; color:black; }
-        .status-expirada { background:#6c757d; color:white; }
-        .oferta-content  { display:flex; flex-direction:column; gap:15px; }
-        @media (min-width:640px) { .oferta-content { flex-direction:row; align-items:center; } }
-        .oferta-img { width:100%; height:120px; object-fit:cover; border-radius:12px; }
-        @media (min-width:640px) { .oferta-img { width:100px; height:100px; } }
-        .oferta-info { flex:1; font-size:14px; line-height:1.6; }
-        .oferta-actions { display:flex; gap:8px; justify-content:flex-end; }
-
-        /* PREVIEW EM TEMPO REAL */
-        .preview-card {
-            background:#f4f4f4; border:2px solid #e0e0e0; border-radius:16px;
-            padding:16px; margin-top:16px; display:flex; align-items:center; gap:14px;
+        const cache = Storage.ofertaAtivaDoCache();
+        if (cache) {
+            this.ofertaAtual = cache;
+            this._renderOferta(cache);
         }
-        body.dark-mode .preview-card { background:#333; border-color:#555; }
-        .prev-img { width:70px; height:70px; object-fit:cover; border-radius:10px; }
-        .prev-titulo { font-weight:800; font-size:14px; color:#d0252a; }
-        .prev-label { font-size:11px; color:#999; margin-bottom:4px; }
+    },
 
-        /* EMPTY STATE */
-        .empty-state { text-align:center; color:#666; padding:30px 20px; background:#f9f9f9; border-radius:20px; border:2px dashed #ccc; }
+    // ── SYNC FIREBASE ───────────────────────
 
-        /* INFO BOX */
-        .info-box { background:#e7f3ff; border-left:4px solid #0066cc; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-size:13px; }
+    async _syncFirebase() {
+        if (this.buscando) return;
+        this.buscando = true;
+        console.log('🔄 Sincronizando com Firebase...');
+        try {
+            const ofertas = await Storage.carregarOfertas();
+            const agora   = getHorarioBrasilia();
+            const ativa   = ofertas.find(o => isOfertaAtiva(o, agora)) || null;
 
-        /* NOTIFICAÇÕES */
-        .notificacao { position:fixed; top:20px; right:20px; padding:14px 20px; border-radius:12px; color:white; font-weight:700; z-index:9999; animation:slideIn .3s ease; box-shadow:0 5px 15px rgba(0,0,0,.2); display:flex; align-items:center; gap:10px; font-size:14px; }
-        .notificacao-sucesso { background:#28a745; }
-        .notificacao-erro    { background:#dc3545; }
-        .notificacao-saindo  { animation:slideOut .3s ease forwards; }
-        @keyframes slideIn { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
-        @keyframes slideOut{ from{transform:translateX(0);opacity:1} to{transform:translateX(110%);opacity:0} }
-    </style>
-</head>
-<body>
-<div class="admin-container">
+            if (ativa) {
+                if (!this.ofertaAtual || this.ofertaAtual.id !== ativa.id) {
+                    console.log('🆕 Nova oferta detectada:', ativa.tituloPagina);
+                    this.ofertaAtual = ativa;
+                    this._renderOferta(ativa);
+                }
+            } else if (!this.ofertaAtual) {
+                this._renderOferta(null);
+            }
+        } finally {
+            this.buscando = false;
+        }
+    },
 
-    <!-- LOGIN -->
-    <div class="admin-card" id="loginBox">
-        <div class="login-box">
-            <img src="img/logo.png" alt="Martinello">
-            <h2>Acesso Restrito</h2>
-            <input type="password" id="senhaInput" placeholder="Digite sua senha">
-            <div id="infoBloqueio"></div>
-            <button id="btnEntrar" onclick="login()" style="margin-top:12px;">ENTRAR</button>
-            <p style="margin-top:15px;font-size:12px;color:#888;">🔐 Sessão expira em 4h por segurança</p>
-        </div>
-    </div>
+    // ── RENDER ──────────────────────────────
 
-    <!-- PAINEL -->
-    <div id="painelAdmin" style="display:none;">
+    _configEmBreve() {
+        return Storage.carregarConfigEmBreve() || {
+            imagem: 'img/produto.png',
+            titulo: 'EM BREVE',
+            mensagem: 'Estamos preparando novidades especiais! Fique ligado.',
+        };
+    },
 
-        <!-- CABEÇALHO -->
-        <div class="admin-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;">
-                <div style="display:flex;align-items:center;">
-                    <h1>⚙️ AGENDADOR</h1>
-                    <button class="logout-button" onclick="logout()">SAIR</button>
-                </div>
-                <div class="toolbar">
-                    <button class="btn-nova" onclick="mostrarNovaOferta()">
-                        <i class="fas fa-plus"></i> NOVA OFERTA
-                    </button>
-                </div>
-            </div>
-            <p style="color:#888;font-size:13px;margin-top:8px;">Apenas UMA oferta fica ativa por vez</p>
-        </div>
+    _renderCarregando() {
+        document.getElementById('tituloPagina').innerText    = 'CARREGANDO...';
+        document.getElementById('infoOferta').innerText      = 'Verificando...';
+        document.getElementById('infoStatus').innerHTML      = 'CARREGANDO...';
+        document.getElementById('infoStatus').className      = 'status-text status-carregando';
+        document.getElementById('cod').disabled              = true;
+        document.getElementById('btnEnviar').disabled        = true;
+        document.querySelector('.btn-text').textContent      = 'CARREGANDO...';
+    },
 
-        <!-- ALERTA SEM OFERTA -->
-        <div id="bannerSemOferta" class="admin-card" style="display:none;">
-            ⚠️ Nenhuma oferta ativa agora! Os vendedores estão vendo a tela "EM BREVE".
-        </div>
+    _renderOferta(oferta) {
+        const status = document.getElementById('infoStatus');
+        const ofEl   = document.getElementById('infoOferta');
+        const cdEl   = document.getElementById('infoCountdown');
 
-        <!-- LISTA -->
-        <div class="admin-card">
-            <h2>📋 OFERTAS PROGRAMADAS</h2>
-            <div id="listaOfertas"></div>
-        </div>
+        if (oferta) {
+            console.log('🟢 Exibindo oferta:', oferta.tituloPagina);
+            document.querySelector('h2').innerText              = oferta.tituloPagina;
+            document.getElementById('fotoProduto').src          = oferta.urlImagem || 'img/produto.png';
+            document.getElementById('cod').disabled             = false;
+            document.getElementById('btnEnviar').disabled       = false;
+            document.querySelector('.btn-text').textContent     = 'GERAR E ENVIAR NO WHATSAPP';
+            document.getElementById('mensagemEmBreve').style.display = 'none';
+            ofEl.innerText   = oferta.tituloPagina;
+            status.innerHTML = '✅ OFERTA ATIVA';
+            status.className = 'status-text status-ativo';
+            if (cdEl) {
+                const cd = countdownTexto(oferta.dataFim);
+                cdEl.innerText = cd ? `⏱ Encerra em ${cd}` : '';
+            }
+        } else {
+            console.log('⏸️ Exibindo tela EM BREVE');
+            const cfg = this._configEmBreve();
+            document.querySelector('h2').innerText              = cfg.titulo;
+            document.getElementById('fotoProduto').src          = cfg.imagem;
+            document.getElementById('cod').disabled             = true;
+            document.getElementById('btnEnviar').disabled       = true;
+            document.querySelector('.btn-text').textContent     = 'EM BREVE';
+            const msg = document.getElementById('mensagemEmBreve');
+            msg.innerText     = cfg.mensagem;
+            msg.style.display = cfg.mensagem ? 'block' : 'none';
+            ofEl.innerText    = 'EM BREVE';
+            status.innerHTML  = '⏸️ SEM OFERTAS';
+            status.className  = 'status-text status-embreve';
+            if (cdEl) cdEl.innerText = '';
+        }
+    },
 
-        <!-- FORMULÁRIO -->
-        <div class="admin-card" id="formNovaOferta" style="display:none;">
-            <button class="back-button" onclick="cancelarEdicao()">
-                <i class="fas fa-arrow-left"></i> VOLTAR
-            </button>
-            <h2 id="formTitulo">➕ NOVA OFERTA</h2>
-            <input type="hidden" id="editandoIdx">
+    // ── MATRÍCULA ───────────────────────────
 
-            <div class="info-box">
-                <strong>🕒 Horário de Brasília</strong> — Use sempre o horário de Brasília ao cadastrar.
-            </div>
+    validarMatriculaInput(input) {
+        let v = input.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 5);
+        input.value = v;
+        this._atualizarBordaMatricula(input);
+    },
 
-            <div class="row">
-                <div class="form-group">
-                    <label>📅 INÍCIO (Brasília)</label>
-                    <input type="datetime-local" id="dataInicio" oninput="AdminPresenter._atualizarPreview()">
-                </div>
-                <div class="form-group">
-                    <label>📅 FIM (Brasília)</label>
-                    <input type="datetime-local" id="dataFim" oninput="AdminPresenter._atualizarPreview()">
-                </div>
-            </div>
+    _atualizarBordaMatricula(input) {
+        const valido = Validators.matricula(input.value);
+        input.style.borderColor = input.value.length === 0 ? '' :
+                                  valido ? 'var(--whatsapp-color)' : '#dc3545';
+    },
 
-            <div class="form-group">
-                <label>🔗 LINK DO PRODUTO</label>
-                <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/...">
-            </div>
+    // ── ENVIO ───────────────────────────────
 
-            <div class="form-group">
-                <label>🖼️ IMAGEM DA OFERTA</label>
-                <div class="upload-area" id="dropArea">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p><strong>Clique ou arraste a imagem aqui</strong></p>
-                    <p style="font-size:14px;">PNG, JPG ou GIF (até 5MB)</p>
-                    <input type="file" id="fileInput" accept="image/*" style="display:none;">
-                </div>
-                <div style="text-align:center;">
-                    <img id="preview" class="preview-image" src="#" style="display:none;">
-                    <button class="btn-danger" id="btnRemoverImagem"
-                        style="display:none;width:auto;padding:8px 20px;"
-                        onclick="removerImagem()">REMOVER</button>
-                </div>
-            </div>
+    async enviar() {
+        const oferta = this.ofertaAtual || Storage.ofertaAtivaDoCache();
+        if (!oferta) { UI.erro('Nenhuma oferta ativa no momento'); return; }
+        if (this.enviando) return;
 
-            <div class="form-group">
-                <label>📝 TEXTO DA OFERTA</label>
-                <small style="display:block;margin-bottom:5px;color:#999;">Use [LINK] e [CODIGO] como variáveis</small>
-                <textarea id="textoOferta" rows="8" placeholder="Digite o texto da oferta..."></textarea>
-            </div>
+        const codInput = document.getElementById('cod').value.trim();
+        if (!Validators.matricula(codInput)) {
+            UI.erro('Digite uma matrícula válida (4 ou 5 números)');
+            return;
+        }
 
-            <div class="form-group">
-                <label>🏷️ TÍTULO DA PÁGINA</label>
-                <input type="text" id="tituloPagina" value="DISPARO EM ANDAMENTO!"
-                    oninput="AdminPresenter._atualizarPreview()">
-            </div>
+        const btn     = document.getElementById('btnEnviar');
+        const btnText = btn.querySelector('.btn-text');
+        const orig    = btnText.textContent;
 
-            <!-- PREVIEW EM TEMPO REAL -->
-            <div class="preview-card" id="previewCard">
-                <img class="prev-img" id="previewCardImg" src="img/produto.png">
-                <div>
-                    <div class="prev-label">PRÉVIA PARA O VENDEDOR</div>
-                    <div class="prev-titulo" id="previewCardTitulo">DISPARO EM ANDAMENTO!</div>
-                </div>
-            </div>
+        this.enviando     = true;
+        btn.disabled      = true;
+        btnText.innerHTML = '<span class="spinner"></span>PROCESSANDO...';
 
-            <div class="btn-group">
-                <button class="btn-primary" onclick="salvarOferta()">✅ SALVAR OFERTA</button>
-                <button class="btn-danger"  onclick="cancelarEdicao()">❌ CANCELAR</button>
-            </div>
-        </div>
+        try {
+            Storage.salvarUltimaMatricula(codInput);
+            const link  = `${CONFIG.urlBase}${codInput}?redir=${encodeURIComponent(oferta.linkProduto)}`;
+            const texto = formatarTexto(oferta.textoOferta, link, codInput);
+            const nav   = getBrowserName();
 
-        <!-- CONFIG EM BREVE -->
-        <div class="admin-card">
-            <h2>⚙️ TELA "EM BREVE"</h2>
-            <p style="margin-bottom:20px;color:#888;">Personaliza a aparência quando não há oferta ativa.</p>
+            console.log('📤 Enviando oferta — matrícula:', codInput, '| navegador:', nav);
 
-            <div class="form-group">
-                <label>🖼️ IMAGEM DE FUNDO</label>
-                <div class="upload-area" id="dropAreaPadrao">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p><strong>Clique ou arraste a imagem padrão</strong></p>
-                    <p style="font-size:14px;">PNG, JPG ou GIF (até 5MB)</p>
-                    <input type="file" id="filePadrao" accept="image/*" style="display:none;">
-                </div>
-                <img id="previewPadrao" class="preview-image" src="img/produto.png">
-            </div>
+            await API.rastrear(codInput, nav);
+            await API.compartilhar(texto, document.getElementById('fotoProduto').src);
 
-            <div class="form-group">
-                <label>📝 TÍTULO</label>
-                <input type="text" id="tituloPadrao" value="EM BREVE">
-            </div>
+            console.log('✅ Oferta compartilhada com sucesso!');
+        } catch (e) {
+            console.error('❌ Erro ao compartilhar:', e);
+            UI.erro('Erro ao compartilhar. Tente novamente.');
+        } finally {
+            btn.disabled        = false;
+            btnText.textContent = orig;
+            this.enviando       = false;
+        }
+    },
+};
 
-            <div class="form-group">
-                <label>ℹ️ MENSAGEM (opcional)</label>
-                <textarea id="mensagemPadrao" rows="3">Estamos preparando novidades especiais para você! Fique ligado.</textarea>
-            </div>
+// ── BOOTSTRAP ────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => IndexPresenter.init());
 
-            <button class="btn-primary" onclick="salvarConfigPadrao()">💾 SALVAR CONFIGURAÇÕES</button>
-        </div>
-
-    </div><!-- /painelAdmin -->
-</div>
-    <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
-    <script src="shared/config.js"></script>
-    <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js"></script>
-    <script src="model/horario.js"></script>
-    <script src="model/storage.js"></script>
-    <script src="model/validators.js"></script>
-    <script src="model/auth.js"></script>
-    <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js"></script>
-</body>
-</html>
+function enviar()                { IndexPresenter.enviar(); }
+function validarMatricula(input) { IndexPresenter.validarMatriculaInput(input); }
