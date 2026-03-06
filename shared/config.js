@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
     urlBase:          'https://www.martinello.com.br/parceiros/',
 
     // Cache — mude o número a cada atualização para limpar cache dos vendedores
-    CACHE_VERSION:    '1.4',
+    CACHE_VERSION:    '1.5',
 
     // Admin
     SESSION_KEY:      'adminSessao',
