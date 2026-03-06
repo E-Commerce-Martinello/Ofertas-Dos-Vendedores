@@ -14,6 +14,25 @@
     </script>
     <style> html.dark-mode-pre body { background: #1a1a1a !important; color: white; } </style>
 
+    <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
+    <script>
+        (function(){
+            // Limpar localStorage se estiver cheio (erro comum no Safari/iOS)
+            try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); }
+            catch(e) {
+                ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
+                    try { localStorage.removeItem(k); } catch(e2){}
+                });
+            }
+            // Limpar cache de versões antigas automaticamente
+            if (localStorage.getItem('cacheVersion') !== '1.4') {
+                ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
+                    try { localStorage.removeItem(k); } catch(e){}
+                });
+                try { localStorage.setItem('cacheVersion','1.4'); } catch(e){}
+            }
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -305,7 +324,6 @@
 
     </div><!-- /painelAdmin -->
 </div>
-<script src="shared/diagnostico.js"></script>
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>

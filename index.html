@@ -20,32 +20,48 @@
     <!-- LIMPEZA DE QUOTA — roda antes de tudo, resolve Safari/iPhone -->
     <script>
         (function() {
-            // Tentar escrita simples
-            try {
-                localStorage.setItem('_t', '1');
-                localStorage.removeItem('_t');
-            } catch(e) {
-                // localStorage cheio — apagar APENAS chaves conhecidas do site
-                // sem tentar ler nada (leitura também pode falhar quando cheio no Safari)
-                var chaves = [
-                    'ofertasMartinello',
-                    'ofertaAtiva', 
-                    'configTelaEmBreve',
-                    'ultimaMatricula',
-                    'adminSessao',
-                    'adminTentativas'
-                ];
-                chaves.forEach(function(k) {
-                    try { localStorage.removeItem(k); } catch(e2) {}
-                });
-                // Verificar se liberou espaço
-                try {
-                    localStorage.setItem('_t', '1');
-                    localStorage.removeItem('_t');
-                } catch(e3) {
-                    // Ainda cheio (outros sites lotaram) — limpar tudo
-                    try { localStorage.clear(); } catch(e4) {}
+            try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); }
+            catch(e) {
+                if (e.name === 'QuotaExceededError') {
+                    // Remover apenas as chaves com imagens base64 (as mais pesadas)
+                    var keys = ['ofertasMartinello', 'ofertaAtiva', 'configTelaEmBreve'];
+                    keys.forEach(function(k) {
+                        try {
+                            var raw = localStorage.getItem(k);
+                            if (!raw) return;
+                            // Se contém base64, remove a chave inteira
+                            if (raw.indexOf('data:image') !== -1) {
+                                localStorage.removeItem(k);
+                                console.warn('🧹 Removido do cache (base64 pesado):', k);
+                            }
+                        } catch(e2) {}
+                    });
+                    // Se ainda cheio, limpar tudo como último recurso
+                    try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); }
+                    catch(e3) {
+                        console.warn('🧹 localStorage ainda cheio — limpando tudo');
+                        localStorage.clear();
+                    }
                 }
+            }
+        })();
+    </script>
+    <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
+    <script>
+        (function(){
+            // Limpar localStorage se estiver cheio (erro comum no Safari/iOS)
+            try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); }
+            catch(e) {
+                ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
+                    try { localStorage.removeItem(k); } catch(e2){}
+                });
+            }
+            // Limpar cache de versões antigas automaticamente
+            if (localStorage.getItem('cacheVersion') !== '1.4') {
+                ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
+                    try { localStorage.removeItem(k); } catch(e){}
+                });
+                try { localStorage.setItem('cacheVersion','1.4'); } catch(e){}
             }
         })();
     </script>
@@ -322,7 +338,6 @@
 </a>
 
 
-<script src="shared/diagnostico.js"></script>
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>

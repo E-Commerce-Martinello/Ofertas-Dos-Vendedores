@@ -17,56 +17,42 @@ const API = {
     },
 
     async compartilhar(texto, imagemUrl) {
-        // Tentar Web Share API com imagem (funciona no Safari/iOS e Android)
+        // Tentar Web Share API com imagem
         try {
             let file = null;
 
             if (imagemUrl && imagemUrl.startsWith('data:')) {
-                // Imagem base64 — converter direto para Blob sem fetch()
-                // (fetch de data: URL falha no GitHub Pages / HTTP2)
-                const arr    = imagemUrl.split(',');
-                const mime   = arr[0].match(/:(.*?);/)[1];
-                const bstr   = atob(arr[1]);
-                const bytes  = new Uint8Array(bstr.length);
-                for (let i = 0; i < bstr.length; i++) bytes[i] = bstr.charCodeAt(i);
-                const blob   = new Blob([bytes], { type: mime });
-                file = new File([blob], 'oferta.png', { type: mime });
-                console.log('🖼️ Imagem base64 convertida para blob:', Math.round(blob.size / 1024), 'KB');
+                // Base64 — converter para Blob sem fetch() (fetch de data: falha no GitHub Pages)
+                const partes = imagemUrl.split(',');
+                const mime   = partes[0].match(/:(.*?);/)[1];
+                const bytes  = atob(partes[1]);
+                const arr    = new Uint8Array(bytes.length);
+                for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+                file = new File([arr], 'oferta.png', { type: mime });
 
             } else if (imagemUrl && imagemUrl.startsWith('http')) {
-                // URL externa — buscar normalmente
+                // URL normal — fetch padrão
                 const res  = await fetch(imagemUrl);
                 const blob = await res.blob();
                 file = new File([blob], 'oferta.png', { type: blob.type });
-                console.log('🖼️ Imagem buscada da URL:', imagemUrl.substring(0, 50));
             }
+            // Se urlImagem vazia ou inválida, compartilha só o texto
 
             if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
-                console.log('📤 Compartilhando via Web Share API com imagem...');
                 await navigator.share({ files: [file], text: texto });
                 return { metodo: 'share-com-imagem' };
             }
 
             if (navigator.share) {
-                // Share sem imagem (browser não suporta canShare com files)
-                console.log('📤 Compartilhando via Web Share API sem imagem...');
                 await navigator.share({ text: texto });
                 return { metodo: 'share-sem-imagem' };
             }
         } catch (e) {
-            console.warn('⚠️ Web Share API falhou:', e.message, '— usando fallback WhatsApp');
+            console.warn('⚠️ Web Share falhou:', e.message, '— abrindo WhatsApp');
         }
 
-        // Fallback: abrir WhatsApp Web
-        console.log('📤 Abrindo WhatsApp Web...');
+        // Fallback universal
         window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
         return { metodo: 'whatsapp' };
-    },
-
-    async copiarTexto(texto) {
-        try {
-            await navigator.clipboard.writeText(texto);
-            return true;
-        } catch { return false; }
     },
 };

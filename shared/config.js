@@ -11,9 +11,6 @@ const CONFIG = Object.freeze({
     rastreioTimeout:  5000,
     urlBase:          'https://www.martinello.com.br/parceiros/',
 
-    // Cache
-    CACHE_VERSION: '1.4',
-
     // Admin
     SESSION_KEY:      'adminSessao',
     MAX_TENTATIVAS:   5,
