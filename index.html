@@ -17,6 +17,35 @@
         html.dark-mode-pre body { background: #1a1a1a !important; }
     </style>
 
+    <!-- LIMPEZA DE QUOTA — roda antes de tudo, resolve Safari/iPhone -->
+    <script>
+        (function() {
+            try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); }
+            catch(e) {
+                if (e.name === 'QuotaExceededError') {
+                    // Remover apenas as chaves com imagens base64 (as mais pesadas)
+                    var keys = ['ofertasMartinello', 'ofertaAtiva', 'configTelaEmBreve'];
+                    keys.forEach(function(k) {
+                        try {
+                            var raw = localStorage.getItem(k);
+                            if (!raw) return;
+                            // Se contém base64, remove a chave inteira
+                            if (raw.indexOf('data:image') !== -1) {
+                                localStorage.removeItem(k);
+                                console.warn('🧹 Removido do cache (base64 pesado):', k);
+                            }
+                        } catch(e2) {}
+                    });
+                    // Se ainda cheio, limpar tudo como último recurso
+                    try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); }
+                    catch(e3) {
+                        console.warn('🧹 localStorage ainda cheio — limpando tudo');
+                        localStorage.clear();
+                    }
+                }
+            }
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 

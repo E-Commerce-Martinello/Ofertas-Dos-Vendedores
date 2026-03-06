@@ -10,6 +10,7 @@ const AdminPresenter = {
     timerBloqueio: null,
 
     async init() {
+        Storage.verificarQuota(); // Limpar localStorage se cheio (Safari/iPhone)
         console.log('🔐 Admin iniciando...');
         UI.tema.aplicar(Storage.carregarTema());
 

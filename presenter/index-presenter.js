@@ -13,6 +13,7 @@ const IndexPresenter = {
     // ── INICIALIZAÇÃO ───────────────────────
 
     async init() {
+        Storage.verificarQuota(); // Limpar localStorage se cheio (Safari/iPhone)
         console.log('🚀 Portal do Vendedor iniciando...');
 
         UI.tema.aplicar(Storage.carregarTema());
