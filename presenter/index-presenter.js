@@ -111,8 +111,12 @@ const IndexPresenter = {
             const ativa   = ofertas.find(o => isOfertaAtiva(o, agora)) || null;
 
             if (ativa) {
-                if (!this.ofertaAtual || this.ofertaAtual.id !== ativa.id) {
-                    console.log('🆕 Nova oferta detectada:', ativa.tituloPagina);
+                // Sempre atualizar — garante que imagem do Firebase substitui cache sem imagem
+                const mesmaOferta = this.ofertaAtual && this.ofertaAtual.id === ativa.id;
+                const semImagem   = mesmaOferta && !this.ofertaAtual.urlImagem && ativa.urlImagem;
+                if (!mesmaOferta || semImagem) {
+                    if (!mesmaOferta) console.log('🆕 Nova oferta:', ativa.tituloPagina);
+                    if (semImagem)    console.log('🖼️ Atualizando imagem do Firebase...');
                     this.ofertaAtual = ativa;
                     this._renderOferta(ativa);
                 }
