@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+
+    <!-- Primeiro: Firebase SDK (ANTES de qualquer outro script!) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+    
+    <!-- Depois: Seus arquivos do Firebase -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-storage.js"></script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal do Vendedor - Martinello</title>
@@ -8,8 +17,31 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome para ícones -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ARQUIVOS JS (ORDEM CORRETA) -->
+    <!-- 1. Configurações primeiro -->
+    <script src="js/config.js"></script>
+    
+    <!-- 2. Funções de horário -->
+    <script src="js/horario-base.js"></script>
+    <script src="js/horario-index.js"></script>
+    
+    <!-- 3. Utilitários -->
+    <script src="js/utils.js"></script>
+    <script src="js/validators.js"></script>
+    <script src="js/image.js"></script>
+    
+    <!-- 4. Storage -->
+    <script src="js/storage.js"></script>
+    
+    <!-- 5. Serviços -->
+    <script src="js/api.js"></script>
+    <script src="js/cache.js"></script>
+    
+    <!-- 6. Interface -->
+    <script src="js/ui.js"></script>
     
     <style>
         * {
@@ -18,7 +50,6 @@
             box-sizing: border-box;
         }
 
-        /* Variáveis de cor */
         :root {
             --primary-color: #d0252a;
             --primary-dark: #a01d21;
@@ -30,12 +61,16 @@
             --text-dark: #f4f4f4;
             --card-light: white;
             --card-dark: #2d2d2d;
+            --embreve-bg: #f0f0f0;
+            --embreve-text: #666;
         }
 
-        /* Dark mode */
         body.dark-mode {
             background: var(--bg-dark);
             color: var(--text-dark);
+            --card-light: var(--card-dark);
+            --embreve-bg: #3d3d3d;
+            --embreve-text: #aaa;
         }
 
         body.dark-mode .card {
@@ -66,7 +101,6 @@
             overflow-x: hidden;
         }
 
-        /* Cabeçalho simplificado */
         .header {
             background: var(--primary-color);
             padding: 25px 20px;
@@ -78,7 +112,6 @@
             z-index: 100;
         }
 
-        /* Logo aumentada */
         .logo-image {
             height: 100px;
             width: auto;
@@ -108,7 +141,6 @@
             transform: rotate(180deg);
         }
 
-        /* Container principal - centralizado */
         .main-container {
             flex: 1;
             display: flex;
@@ -119,7 +151,6 @@
             min-height: calc(100vh - 130px);
         }
 
-        /* Card principal */
         .card {
             background: var(--card-light);
             padding: 30px 25px;
@@ -145,7 +176,6 @@
             }
         }
 
-        /* Título principal */
         h2 { 
             font-family: 'Montserrat', sans-serif;
             font-weight: 800;
@@ -169,7 +199,6 @@
             border-radius: 2px;
         }
 
-        /* Imagem do produto */
         .product-image {
             width: 100%;
             border-radius: 20px;
@@ -184,7 +213,6 @@
             box-shadow: 0 15px 30px rgba(208, 37, 42, 0.2);
         }
 
-        /* Input group */
         .input-group {
             position: relative;
             margin: 20px 0;
@@ -217,7 +245,12 @@
             box-shadow: 0 0 0 3px rgba(208, 37, 42, 0.1);
         }
 
-        /* Botão principal */
+        input:disabled {
+            background: #f0f0f0;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
         .btn-primary {
             background: var(--primary-color);
             color: white;
@@ -250,9 +283,9 @@
         .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            background: #999;
         }
 
-        /* Loading spinner */
         .spinner {
             display: inline-block;
             width: 20px;
@@ -268,7 +301,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Botão flutuante do WhatsApp */
         .whatsapp-float {
             position: fixed;
             bottom: 30px;
@@ -310,7 +342,6 @@
             }
         }
 
-        /* Tooltip do WhatsApp */
         .whatsapp-tooltip {
             position: absolute;
             right: 70px;
@@ -334,7 +365,6 @@
             right: 80px;
         }
 
-        /* Responsividade */
         @media (max-width: 768px) {
             .logo-image {
                 height: 90px;
@@ -368,7 +398,6 @@
             }
         }
 
-        /* Animações adicionais */
         .glow {
             animation: glow 2s ease-in-out infinite;
         }
@@ -381,38 +410,121 @@
                 box-shadow: 0 8px 25px rgba(208, 37, 42, 0.6);
             }
         }
+
+        .mensagem-embreve {
+            color: var(--embreve-text);
+            margin: 15px 0;
+            font-size: 16px;
+            line-height: 1.5;
+            padding: 15px;
+            background: var(--embreve-bg);
+            border-radius: 10px;
+            display: none;
+            white-space: pre-line;
+        }
+
+        .info-panel {
+            font-size: 13px;
+            color: #666;
+            margin-top: 20px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            text-align: left;
+            border: 1px solid #eee;
+        }
+
+        body.dark-mode .info-panel {
+            background: #3d3d3d;
+            color: #aaa;
+            border-color: #555;
+        }
+
+        .info-panel div {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-panel i {
+            width: 20px;
+            color: var(--primary-color);
+        }
+
+        .status-text {
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .status-ativo {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-inativo {
+            background: #6c757d;
+            color: white;
+        }
+
+        .status-embreve {
+            background: #ffc107;
+            color: black;
+        }
+
+        .empty-message {
+            color: #999;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
 
-<!-- Cabeçalho com logo centralizada -->
 <header class="header">
-    <img src="logo.png" alt="Logo Martinello" class="logo-image">
-    <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+    <img src="img/logo.png" alt="Logo Martinello" class="logo-image">
+    <button class="dark-mode-toggle" onclick="TEMA.toggle()">
         <i class="fas fa-moon"></i>
     </button>
 </header>
 
-<!-- Container principal com card centralizado -->
 <div class="main-container">
-    <!-- Card principal -->
     <div class="card">
-        <h2>DISPARO EM ANDAMENTO!</h2>
+        <h2 id="tituloPagina">DISPARO EM ANDAMENTO!</h2>
         
-        <img id="fotoProduto" class="product-image" src="produto.png" alt="Imagem do Produto">
+        <img id="fotoProduto" class="product-image" src="img/produto.png" alt="Imagem do Produto">
+        
+        <!-- Mensagem para quando não há oferta -->
+        <div id="mensagemEmBreve" class="mensagem-embreve"></div>
         
         <div class="input-group">
             <i class="fas fa-tag input-icon"></i>
-            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)">
+            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)" maxlength="5">
         </div>
         
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
+        
+        <!-- PAINEL DE INFORMAÇÕES -->
+        <div class="info-panel">
+            <div>
+                <i class="fas fa-clock"></i>
+                <strong>Horário Brasília:</strong> <span id="infoHoraBrasilia"></span>
+            </div>
+            <div>
+                <i class="fas fa-tag"></i>
+                <strong>Oferta:</strong> <span id="infoOferta">EM BREVE</span>
+            </div>
+            <div>
+                <i class="fas fa-info-circle"></i>
+                <strong>Status:</strong> <span id="infoStatus" class="status-text">SEM OFERTAS NO MOMENTO</span>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Botão flutuante do WhatsApp -->
 <a href="https://wa.me/556598115091?text=Olá!%20Preciso%20de%20ajuda%20com%20o%20Portal%20do%20Vendedor%20Martinello" 
    class="whatsapp-float" 
    target="_blank"
@@ -423,281 +535,235 @@
 
 <script>
 // ============================================
-// CONFIGURAÇÕES - COLE SEU TEXTO AQUI
+// CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
-
-const CONFIG = {
-    // Google Forms (RASTREIO) - Não mexa aqui
-    googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfdheHBbGMCLIXXAeM0b8rTbpextHznj6BDS6lKGLN9ZMjd4g/formResponse",
-    entryIdCodigo: "entry.200360405",
-    entryIdBrowser: "entry.2003110990",
-    
-    // ========================================
-    // ÁREA DE PERSONALIZAÇÃO - SÓ MEXER AQUI
-    // ========================================
-    
-    // 1. LINK DO PRODUTO (só trocar a URL)
-    urlProduto: "https://www.martinello.com.br/impressora-epson-l3250-ecotank-wireless-77008",
-    
-    // 2. TEXTO DA OFERTA - COLE AQUI EXATAMENTE COMO QUER QUE APAREÇA
-    // Use [LINK] no lugar onde o link do produto deve ir
-    // Use [CODIGO] no lugar onde o código do vendedor deve aparecer
-    textoOferta: `🖨️✨ Imprima mais e gaste muito menos!
-
-No FEIRÃO DE ANIVERSÁRIO MARTINELLO, você encontra a solução perfeita para estudar, trabalhar e organizar sua rotina.
-
-🔥 Impressora Epson L3250 EcoTank – Wireless
-
-Uma impressora moderna, econômica e super prática para o dia a dia!
-
-✔️ Sistema EcoTank – muito mais economia de tinta
-✔️ Wi-Fi integrado – imprima direto do celular ou computador
-✔️ Multifuncional – imprime, copia e digitaliza
-✔️ Alta qualidade Epson
-
-E o melhor 👇
-💳 Aproveite o Feirão de Aniversário Martinello com todo estoque em até 12x sem juros!
-
-👉 Clique no meu link exclusivo e garanta a sua agora:
-🔗 [LINK]
-
-Se quiser mais informações, me chama aqui que eu te ajudo! 😉`,
-    
-    // 3. WHATSAPP DE SUPORTE (só trocar o número)
-    suporteWhatsApp: "556598115091",
-    mensagemSuporte: "Olá! Preciso de ajuda."
+let configTelaEmBreve = {
+    imagem: 'img/produto.png',
+    titulo: 'EM BREVE',
+    mensagem: 'Estamos preparando novidades especiais para você! Fique ligado.'
 };
 
+try {
+    const configSalva = localStorage.getItem('configTelaEmBreve');
+    if (configSalva) {
+        configTelaEmBreve = { ...configTelaEmBreve, ...JSON.parse(configSalva) };
+        console.log('✅ Configurações "EM BREVE" carregadas');
+    }
+} catch (e) {}
+
 // ============================================
-// NOVA FUNÇÃO: VALIDAR E LIMPAR MATRÍCULA
+// FUNÇÕES DE STORAGE (AGORA USANDO FIREBASE!)
 // ============================================
 
-function validarMatricula(input) {
-    // Remove qualquer caractere que não seja número
-    let valor = input.value.replace(/\D/g, '');
-    
-    // Remove zeros à esquerda
-    valor = valor.replace(/^0+/, '');
-    
-    // Atualiza o valor no input
-    input.value = valor;
+// Carregar ofertas do Firebase
+async function carregarOfertas() {
+    return await carregarOfertasFirebase();
+}
+
+// Salvar ofertas no Firebase
+async function salvarOfertas(novasOfertas) {
+    return await salvarOfertasFirebase(novasOfertas);
 }
 
 // ============================================
-// OTIMIZAÇÕES - PREVENIR ERROS
+// VERIFICAR STATUS DA OFERTA
 // ============================================
-
-let enviando = false;
-const TIMEOUT_MS = 5000;
-
-async function validarImagem(src) {
-    if (!src || src === '') return false;
+async function verificarStatus() {
     try {
-        const response = await fetch(src, { method: 'HEAD' });
-        return response.ok;
-    } catch {
-        return false;
+        const agoraBrasilia = getHorarioBrasilia();
+        document.getElementById('infoHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia);
+        
+        // CORREÇÃO: Adicionamos o "await" para esperar o Firebase
+        const ofertas = await carregarOfertas(); 
+        
+        if (!Array.isArray(ofertas)) return;
+
+        let ofertaAtiva = null;
+        for (const oferta of ofertas) {
+            const inicio = new Date(oferta.dataInicio);
+            const fim = new Date(oferta.dataFim);
+            if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
+                ofertaAtiva = oferta;
+                break;
+            }
+        }
+
+        // ... resto do código de atualização da interface (que já está bom)
+        
+        // Atualizar oferta ativa no localStorage
+        if (ofertaAtiva) {
+            localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
+            localStorage.setItem('modoExpirado', 'false');
+        } else {
+            localStorage.removeItem('ofertaAtiva');
+            localStorage.setItem('modoExpirado', 'true');
+        }
+        
+        // 4️⃣ ATUALIZAR INTERFACE
+        const statusElement = document.getElementById('infoStatus');
+        const ofertaElement = document.getElementById('infoOferta');
+        
+        if (ofertaAtiva) {
+            // ✅ MODO COM OFERTA ATIVA
+            document.querySelector('h2').innerText = ofertaAtiva.tituloPagina;
+            if (ofertaAtiva.urlImagem) {
+                document.getElementById('fotoProduto').src = ofertaAtiva.urlImagem;
+            }
+            document.getElementById('cod').disabled = false;
+            document.getElementById('btnEnviar').disabled = false;
+            document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
+            document.getElementById('mensagemEmBreve').style.display = 'none';
+            
+            // Atualizar painel de informações
+            ofertaElement.innerHTML = `${ofertaAtiva.tituloPagina} (${formatarBrasilia(new Date(ofertaAtiva.dataInicio))} - ${formatarBrasilia(new Date(ofertaAtiva.dataFim))})`;
+            statusElement.innerHTML = '✅ OFERTA ATIVA';
+            statusElement.className = 'status-text status-ativo';
+            
+        } else {
+            // ⏸️ MODO SEM OFERTA
+            document.querySelector('h2').innerText = configTelaEmBreve.titulo;
+            document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
+            document.getElementById('cod').disabled = true;
+            document.getElementById('btnEnviar').disabled = true;
+            document.querySelector('.btn-text').textContent = 'EM BREVE';
+            
+            // Mostrar mensagem personalizada se existir
+            const msgElement = document.getElementById('mensagemEmBreve');
+            if (configTelaEmBreve.mensagem) {
+                msgElement.innerText = configTelaEmBreve.mensagem;
+                msgElement.style.display = 'block';
+            } else {
+                msgElement.style.display = 'none';
+            }
+            
+            // Atualizar painel de informações
+            ofertaElement.innerHTML = 'EM BREVE';
+            statusElement.innerHTML = '⏸️ SEM OFERTAS NO MOMENTO';
+            statusElement.className = 'status-text status-embreve';
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro em verificarStatus:', error);
     }
 }
 
 // ============================================
-// FUNÇÕES (NÃO MEXER DAQUI PARA BAIXO)
+// FUNÇÃO DE ENVIO
 // ============================================
+let enviando = false;
 
-// Dark Mode
-function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
-    const icon = document.querySelector('.dark-mode-toggle i');
-    if(document.body.classList.contains('dark-mode')) {
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
-    } else {
-        icon.classList.remove('fa-sun');
-        icon.classList.add('fa-moon');
-    }
-}
-
-// Função melhorada para identificar o navegador (CORRIGIDO)
-function getBrowserName() {
-    const ua = navigator.userAgent;
-    const platform = navigator.platform;
-    
-    // Detecção específica para Samsung Internet
-    if (ua.includes('SamsungBrowser')) {
-        return 'Samsung Internet';
-    }
-    
-    // Detecção específica para iPhone/iPad
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Detecção para iOS
-    if (isIOS) {
-        if (ua.includes('CriOS')) return 'Chrome (iOS)';
-        if (ua.includes('FxiOS')) return 'Firefox (iOS)';
-        if (ua.includes('EdgiOS')) return 'Edge (iOS)';
-        return 'Safari (iOS)';
-    }
-    
-    // Detecção para Android
-    if (ua.includes('Android')) {
-        if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome (Android)';
-        if (ua.includes('Firefox')) return 'Firefox (Android)';
-        if (ua.includes('Edg')) return 'Edge (Android)';
-        return 'Navegador Padrão (Android)';
-    }
-    
-    // Detecção para Desktop
-    if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome (Desktop)';
-    if (ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Edg')) return 'Safari (Desktop)';
-    if (ua.includes('Edg')) return 'Edge (Desktop)';
-    if (ua.includes('Firefox')) return 'Firefox (Desktop)';
-    if (ua.includes('OPR') || ua.includes('Opera')) return 'Opera (Desktop)';
-    
-    return 'Outro/Desconhecido';
-}
-
-// Função para mostrar/ocultar loading
-function setLoading(isLoading) {
-    const btn = document.getElementById('btnEnviar');
-    const btnText = btn.querySelector('.btn-text');
-    
-    if(isLoading) {
-        btn.disabled = true;
-        btnText.innerHTML = '<span class="spinner"></span>Processando...';
-    } else {
-        btn.disabled = false;
-        btnText.textContent = 'GERAR E ENVIAR NO WHATSAPP';
-    }
-}
-
-// Função principal com otimizações
 async function enviar() {
-    // Prevenir múltiplos cliques
-    if (enviando) {
-        console.log("⏳ Já está processando, aguarde...");
+    // Verificar se há oferta ativa
+    const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
+    if (!oferta) {
+        if (typeof NOTIFICACAO !== 'undefined') {
+            NOTIFICACAO.erro('Nenhuma oferta ativa no momento');
+        } else {
+            alert('Nenhuma oferta ativa no momento');
+        }
         return;
     }
     
+    if (enviando) return;
+    
     try {
         const codInput = document.getElementById('cod').value.trim();
-        
-        // Validação: não permite campo vazio
         if(!codInput) { 
-            alert("Por favor, digite sua matrícula!"); 
-            return; 
-        }
-        
-        // Validação: não permite apenas zeros
-        if(codInput === '') { 
-            alert("Matrícula inválida!"); 
+            if (typeof NOTIFICACAO !== 'undefined') {
+                NOTIFICACAO.erro('Digite sua matrícula');
+            } else {
+                alert('Digite sua matrícula');
+            }
             return; 
         }
 
         enviando = true;
-        setLoading(true);
-
-        const navegador = getBrowserName();
         
-        // Monta o link final com o código do vendedor (já limpo dos zeros à esquerda)
-        const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(CONFIG.urlProduto)}`;
-        
-        // Substitui [LINK] e [CODIGO] no texto
-        const textoDaOferta = CONFIG.textoOferta
-            .replace('[LINK]', linkFinal)
-            .replace('[CODIGO]', codInput);
+        // Mostrar loading
+        const btn = document.getElementById('btnEnviar');
+        const btnText = btn.querySelector('.btn-text');
+        const textoOriginal = btnText.textContent;
+        btn.disabled = true;
+        btnText.innerHTML = '<span class="spinner"></span>Processando...';
 
-        // RASTREIO INVISÍVEL COM TIMEOUT
-        try {
-            if(CONFIG.googleFormUrl.includes("formResponse")) {
-                const formData = new FormData();
-                formData.append(CONFIG.entryIdCodigo, codInput);
-                formData.append(CONFIG.entryIdBrowser, navegador);
-                
-                console.log("📤 Enviando rastreio:", { 
-                    codigo: codInput, 
-                    navegador: navegador
-                });
-                
-                // Adiciona timeout para não travar
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-                
-                await fetch(CONFIG.googleFormUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: formData,
-                    signal: controller.signal
-                }).catch(error => {
-                    if (error.name === 'AbortError') {
-                        console.warn("⚠️ Rastreio timeout, mas continuando...");
-                    } else {
-                        console.error("❌ Erro no rastreio:", error);
-                    }
-                }).finally(() => clearTimeout(timeoutId));
-                
-                console.log("✅ Rastreio processado");
-            }
-        } catch (error) {
-            console.error("❌ Erro crítico no rastreio:", error);
+        const navegador = typeof getBrowserName !== 'undefined' ? getBrowserName() : 'Desconhecido';
+        const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(oferta.linkProduto)}`;
+        const textoDaOferta = typeof formatarTexto !== 'undefined' 
+            ? formatarTexto(oferta.textoOferta, linkFinal, codInput)
+            : oferta.textoOferta.replace('[LINK]', linkFinal).replace('[CODIGO]', codInput);
+
+        // Rastreio (se API existir)
+        if (typeof API !== 'undefined' && API.rastrear) {
+            await API.rastrear(codInput, navegador);
         }
 
-        // TENTATIVA DE COMPARTILHAMENTO COM VALIDAÇÃO
-        try {
-            const imgElement = document.getElementById('fotoProduto');
-            
-            // Valida se a imagem existe
-            const imagemValida = await validarImagem(imgElement.src);
-            if (!imagemValida) {
-                throw new Error('Imagem não encontrada ou inválida');
+        // Compartilhamento (se API existir)
+        if (typeof API !== 'undefined' && API.compartilhar) {
+            const resultado = await API.compartilhar(textoDaOferta, document.getElementById('fotoProduto').src);
+            if (resultado.sucesso && typeof NOTIFICACAO !== 'undefined') {
+                NOTIFICACAO.sucesso('Compartilhado com sucesso!');
             }
-            
-            const response = await fetch(imgElement.src);
-            const blob = await response.blob();
-            
-            if (blob.type.startsWith('image/')) {
-                const file = new File([blob], 'oferta.png', { type: 'image/png' });
-
-                // Tenta compartilhar com imagem
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        text: textoDaOferta
-                    });
-                    console.log("✅ Compartilhamento realizado com sucesso");
-                    setLoading(false);
-                    enviando = false;
-                    return;
-                } else {
-                    throw new Error('Web Share não suporta arquivos');
-                }
-            } else {
-                throw new Error('Arquivo não é imagem válida');
-            }
-        } catch (error) {
-            console.log("📱 Usando fallback do WhatsApp:", error.message);
-            // Fallback: Abre o WhatsApp apenas com texto
-            const msgZap = encodeURIComponent(textoDaOferta);
-            window.open(`https://wa.me/?text=${msgZap}`, '_blank');
+        } else {
+            // Fallback
+            window.open(`https://wa.me/?text=${encodeURIComponent(textoDaOferta)}`, '_blank');
         }
         
-        setLoading(false);
+        // Restaurar botão
+        btn.disabled = false;
+        btnText.textContent = textoOriginal;
         enviando = false;
+        
     } catch (error) {
-        console.error("Erro no processo:", error);
-        alert("Ocorreu um erro. Tente novamente.");
-        setLoading(false);
+        console.error("Erro:", error);
+        if (typeof NOTIFICACAO !== 'undefined') {
+            NOTIFICACAO.erro('Erro ao compartilhar');
+        } else {
+            alert('Erro ao compartilhar');
+        }
+        
+        const btn = document.getElementById('btnEnviar');
+        btn.disabled = false;
+        btn.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
         enviando = false;
     }
 }
 
-// Adicionar efeito de brilho no botão principal a cada 3 segundos
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
+function iniciar() {
+    try {
+        // Inicializar tema
+        if (typeof TEMA !== 'undefined') {
+            TEMA.init();
+        }
+        
+        // Verificar imagem
+        const img = document.getElementById('fotoProduto');
+        if (typeof IMAGEM !== 'undefined' && IMAGEM.verificarCarregamento) {
+            IMAGEM.verificarCarregamento(img, configTelaEmBreve.imagem);
+        }
+        
+        // Iniciar verificação de status
+        verificarStatus();
+        setInterval(verificarStatus, 1000);
+        
+        console.log('✅ Portal do Vendedor iniciado');
+        
+    } catch (error) {
+        console.error('❌ Erro na inicialização:', error);
+    }
+}
+
+// Iniciar quando a página carregar
+document.addEventListener('DOMContentLoaded', iniciar);
+
+// Efeito de brilho no botão
 setInterval(() => {
     const btn = document.getElementById('btnEnviar');
     if (btn && !btn.disabled) {
         btn.classList.add('glow');
-        setTimeout(() => {
-            btn.classList.remove('glow');
-        }, 1000);
+        setTimeout(() => btn.classList.remove('glow'), 1000);
     }
 }, 3000);
 </script>
