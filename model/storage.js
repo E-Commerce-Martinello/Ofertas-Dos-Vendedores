@@ -198,5 +198,5 @@ const Storage = {
     salvarTema(tema)            { localStorage.setItem('tema', tema); },
     carregarTema()              { return localStorage.getItem('tema') || 'light'; },
     salvarUltimaMatricula(cod)  { this._salvarLocalSafe('ultimaMatricula', cod); },
-    carregarUltimaMatricula()   { return localStorage.getItem('ultimaMatricula') || ''; },
+    carregarUltimaMatricula() { return (localStorage.getItem('ultimaMatricula') || '').replace(/\D/g, ''); },
 };
