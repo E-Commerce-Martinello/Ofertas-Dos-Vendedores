@@ -5,7 +5,7 @@
 const Validators = {
 
     matricula(valor) {
-        return /^\d{4,5}$/.test(valor);
+        return /^\d{3,5}$/.test(valor);
     },
 
     imagem(file) {
