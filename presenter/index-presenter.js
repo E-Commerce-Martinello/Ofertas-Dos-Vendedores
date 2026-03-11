@@ -209,7 +209,7 @@ const IndexPresenter = {
 
         const codInput = document.getElementById('cod').value.trim();
         if (!Validators.matricula(codInput)) {
-            UI.erro('Digite uma matrícula válida (4 ou 5 números)');
+            UI.erro('Digite uma matrícula válida (3 ou 5 números)');
             return;
         }
 
