@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello</title>
+    <title>Admin Martinello | Oficial</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -12,7 +12,249 @@
             if (t === 'dark') document.documentElement.classList.add('dark-mode-pre');
         })();
     </script>
-    <style> html.dark-mode-pre body { background: #1a1a1a !important; color: white; } </style>
+    <style> html.dark-mode-pre body { background: #1a1a1a !important; color: white; } 
+        /* DASHBOARD — registros iniciados, não envios confirmados */
+        .dashboard-filtros { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+        .dashboard-filtros label { font-size:12px; font-weight:800; color:#666; }
+        .dashboard-filtros select { background:#fff; color:#333; border:1px solid #ccc; border-radius:10px; padding:10px; max-width:260px; width:100%; }
+        .dashboard-grade { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
+        .dashboard-metrica { border:1px solid #e2e2e2; border-radius:14px; padding:15px; background:#fafafa; min-width:0; }
+        .dashboard-metrica strong { display:block; font-size:28px; color:#d0252a; overflow-wrap:anywhere; }
+        .dashboard-metrica span { display:block; font-size:11px; color:#666; font-weight:700; margin-top:4px; }
+        .dashboard-ranking-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+        .dashboard-ranking { border:1px solid #e4e4e4; border-radius:15px; padding:15px; min-width:0; }
+        .dashboard-ranking h3 { font-size:14px; margin-bottom:14px; }
+        .dashboard-barra-item { margin:11px 0; }
+        .dashboard-barra-cabecalho { display:flex; gap:10px; justify-content:space-between; align-items:flex-start; font-size:12px; line-height:1.5; }
+        .dashboard-barra-cabecalho span { min-width:0; overflow-wrap:anywhere; }
+        .dashboard-barra-cabecalho strong { color:#d0252a; white-space:nowrap; }
+        .dashboard-barra-pista { background:#eee; height:7px; border-radius:8px; overflow:hidden; margin-top:6px; }
+        .dashboard-barra-pista>div { background:#d0252a; height:100%; border-radius:8px; }
+        .dashboard-vazio { font-size:12px; color:#777; }
+        .dashboard-explicacao { color:#666; font-size:12px; line-height:1.6; margin-top:12px; }
+        body.dark-mode .dashboard-metrica,body.dark-mode .dashboard-ranking { background:#323232; border-color:#555; }
+        body.dark-mode .dashboard-filtros label,body.dark-mode .dashboard-metrica span,body.dark-mode .dashboard-explicacao,body.dark-mode .dashboard-vazio { color:#ccc; }
+        body.dark-mode .dashboard-filtros select { background:#333; color:#eee; border-color:#777; }
+        body.dark-mode .dashboard-barra-pista { background:#505050; }
+        @media(min-width:700px) { .dashboard-grade { grid-template-columns:repeat(4,minmax(0,1fr)); } .dashboard-ranking-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+
+        /* 1.6.6 — lista única e responsiva, sem rolagem horizontal */
+        .vendor-filters { grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr)) !important; }
+        .vendor-filters > input { grid-column:span 2; min-width:0; }
+        .vendor-cards { display:grid; gap:10px; width:100%; min-width:0; }
+        .vendor-entry { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) auto;
+            gap:12px; padding:15px; border:1px solid #e5e5e5; border-radius:13px; background:#fff; align-items:center; min-width:0; }
+        .vendor-entry-main,.vendor-entry-field { min-width:0; overflow-wrap:anywhere; }
+        .vendor-entry-name { display:block; font-size:13px; font-weight:800; margin-bottom:5px; }
+        .vendor-entry-main small,.vendor-entry-field small,.vendor-entry-meta { display:block; font-size:11px; line-height:1.5; color:#777; }
+        .vendor-entry-field .field-label { display:block; font-size:10px; font-weight:800; text-transform:uppercase; color:#888; margin-bottom:6px; }
+        .vendor-entry-meta { margin-top:5px; }
+        .vendor-entry-actions { display:flex; flex-wrap:wrap; gap:7px; justify-content:flex-end; }
+        .vendor-entry .vendor-badge { white-space:normal; line-height:1.5; }
+        .vendor-tools { margin:18px 0; border-radius:16px; border:1px solid #e3e3e3; padding:12px; }
+        .vendor-tools > summary { list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:9px 7px; font-weight:800; }
+        .vendor-tools > summary::-webkit-details-marker {display:none;}
+        .vendor-tools > summary::after {content:'⌄'; font-size:20px; }
+        .vendor-tools[open] > summary::after {content:'⌃';}
+        .vendor-tools-help {font-size:11px; color:#888; font-weight:600; margin-left:auto;}
+        .vendor-tools > .admin-card { margin:12px 0; }
+        body.dark-mode .vendor-entry { background:#323232; border-color:#4d4d4d; }
+        body.dark-mode .vendor-entry-main small,body.dark-mode .vendor-entry-field small,body.dark-mode .vendor-entry-meta {color:#c0c0c0;}
+        body.dark-mode .vendor-tools { border-color:#515151; }
+        @media(max-width:1050px) { .vendor-entry { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+            .vendor-entry-actions { grid-column:span 2; justify-content:flex-start; } }
+        @media(max-width:600px) { .vendor-entry { grid-template-columns:1fr; gap:9px; }
+            .vendor-entry-actions { grid-column:auto; }
+            .vendor-filters > input { grid-column:auto; }
+            .vendor-tools-help {display:none;} }
+
+        /* 1.6.7 — fila de contatos: sem tabelas com rolagem horizontal */
+        .contatos-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:12px;}
+        .contatos-grid .form-group {min-width:0;margin-bottom:12px;}
+        .contatos-grid input,.contatos-grid select {width:100%;max-width:100%;}
+        .contatos-toolbar {display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:15px 0;}
+        .contatos-toolbar button {width:auto;margin:0;}
+        .contatos-lista {display:grid;gap:10px;}
+        .contatos-linha {display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:13px;border:1px solid #ddd;border-radius:13px;min-width:0;}
+        .contatos-linha strong,.contatos-linha small {display:block;overflow-wrap:anywhere;}
+        .contatos-linha small {color:#777;line-height:1.6;}
+        .contatos-acoes {display:flex;flex-wrap:wrap;gap:8px;}
+        .contatos-acoes button {padding:9px 11px;width:auto;min-width:0;margin:0;border-radius:10px;cursor:pointer;}
+        .contatos-acoes button:disabled {opacity:.5;cursor:not-allowed;}
+        .contatos-linha input[type=checkbox] {width:18px;height:18px;flex:none;}
+        .contatos-conteudo {flex:1 1 220px;min-width:0;}
+        body.dark-mode .contatos-linha {border-color:#5b5b5b;}
+        body.dark-mode .contatos-linha small {color:#bbb;}
+
+        /* v1.6.8 — filtros claros, seção de links independente e hierarquia mais leve */
+        .vendor-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 12px;}
+        .vendor-section-head h2{margin:0;}
+        .vendor-quiet-btn{width:auto!important;margin:0!important;border:1px solid #dedede;background:transparent;color:inherit;border-radius:10px;padding:10px 13px;font-weight:700;cursor:pointer;font-size:12px;}
+        .vendor-quiet-btn:hover{border-color:#ce292e;color:#ce292e;}
+        .vendor-quiet-btn:disabled{opacity:.5;cursor:not-allowed;}
+        .vendor-link-panel{margin:16px 0;}
+        .vendor-link-tools{margin:0!important;background:#fafafa;}
+        .vendor-link-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+        .vendor-link-actions button{width:auto;margin:0;padding:11px 15px;font-size:12px;}
+        .vendor-link-filters{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1.3fr);gap:10px;margin:10px 0;}
+        .vendor-link-filters select,.vendor-link-filters input{width:100%;min-width:0;padding:11px;border:1px solid #dedede;border-radius:10px;background:white;color:#292929;}
+        .vendor-links-lista{display:grid;gap:6px;margin:10px 0;}
+        .vendor-link-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;min-width:0;padding:10px 12px;border:1px solid #e6e6e6;border-radius:10px;background:white;font-size:12px;}
+        .vendor-link-row strong{overflow-wrap:anywhere;}
+        .vendor-link-row small{display:block;color:#7a7a7a;line-height:1.5;margin-top:2px;overflow-wrap:anywhere;}
+        .vendor-link-row .vendor-badge{margin-left:auto;}
+        .vendor-centered-actions{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;}
+        .vendor-entry-meta{display:none;}
+        .vendor-entry-actions button{width:auto!important;}
+        .vendor-entry{gap:10px;}
+        .vendor-filters>input{grid-column:span 2;}
+        .vendor-pagination{padding:10px 2px;border-top:1px solid #ededed;}
+        .vendor-pagination button{background:transparent;color:inherit;border:1px solid #dedede;}
+        body.dark-mode .vendor-link-tools{background:#282828;border-color:#505050;}
+        body.dark-mode .vendor-link-row{background:#343434;border-color:#515151;}
+        body.dark-mode .vendor-link-row small{color:#c2c2c2;}
+        body.dark-mode .vendor-link-filters select,body.dark-mode .vendor-link-filters input{background:#383838;border-color:#626262;color:#f2f2f2;}
+        body.dark-mode .vendor-quiet-btn,body.dark-mode .vendor-pagination button{border-color:#555;color:#e8e8e8;}
+        body.dark-mode .vendor-pagination{border-color:#444;}
+        @media(max-width:650px){.vendor-link-filters{grid-template-columns:1fr;}.vendor-filters>input{grid-column:span 1;}.vendor-link-actions button{flex:1 1 100%;}}
+    
+        /* v1.6.9 — contatos com hierarquia clara e sem rolagem lateral */
+        .contatos-layout {display:grid;grid-template-columns:minmax(330px,0.95fr) minmax(0,1.25fr);gap:16px;align-items:start;}
+        .contatos-painel,.contatos-fila-card {min-width:0;margin:0!important;}
+        .contatos-layout .admin-card h2 {font-size:18px;margin-bottom:9px;}
+        .contatos-painel .contatos-grid {grid-template-columns:1fr 1fr;gap:10px;}
+        .contatos-painel .contatos-grid .form-group:nth-child(1) {grid-column:1/-1;}
+        .contatos-toolbar {padding:12px 0;border-top:1px solid #e6e6e6;gap:8px;}
+        .contatos-toolbar span {font-weight:700;margin-right:auto;}
+        .contatos-toolbar button {font-size:11px;padding:9px 11px;}
+        .contatos-painel #contatosElegiveis {max-height:380px;overflow-y:auto;overscroll-behavior:contain;}
+        .contatos-painel #contatosElegiveis .contatos-linha {padding:9px 11px;border-radius:10px;}
+        .contatos-fila-card #contatosFila {max-height:900px;overflow-y:auto;}
+        .contatos-config {border:1px solid #e1e1e1;border-radius:12px;padding:13px 14px;margin:6px 0 12px;}
+        .contatos-config>summary {cursor:pointer;font-weight:700;display:flex;align-items:center;gap:9px;}
+        .contatos-config>summary span {margin-left:auto;font-size:11px;font-weight:500;color:#777;}
+        .contatos-config[open]>summary {margin-bottom:13px;}
+        .contatos-config .form-group {margin-bottom:10px;}
+        .contatos-config input,.contatos-config textarea {width:100%;min-width:0;max-width:100%;color:inherit;background:transparent;border:1px solid #c9c9c9;border-radius:10px;padding:11px;}
+        .contatos-config-rodape {display:flex;justify-content:flex-end;}
+        .contatos-config-rodape button {width:auto;margin:0;padding:10px 14px;font-size:12px;}
+        .contatos-config-status {font-size:12px;color:#28764d;line-height:1.5;margin:6px 0 12px;}
+        .contatos-config-status.erro {color:#b6202a;}
+        .contatos-fila-card .contatos-linha {padding:12px;gap:9px;}
+        .contatos-fila-card .contatos-acoes {gap:6px;}
+        .contatos-fila-card .contatos-acoes button {font-size:10px;padding:8px 10px;}
+        body.dark-mode .contatos-toolbar {border-color:#4e4e4e;}
+        body.dark-mode .contatos-config {border-color:#555;}
+        body.dark-mode .contatos-config input,body.dark-mode .contatos-config textarea {border-color:#666;}
+        body.dark-mode .contatos-config>summary span {color:#bbb;}
+        body.dark-mode .contatos-config-status {color:#91d4a7;}
+        body.dark-mode .contatos-config-status.erro {color:#ff9da4;}
+        @media(max-width:1040px) {.contatos-layout {grid-template-columns:1fr;}.contatos-painel #contatosElegiveis {max-height:320px;}}
+        @media(max-width:590px) {.contatos-painel .contatos-grid {grid-template-columns:1fr;}.contatos-painel .contatos-grid .form-group:nth-child(1) {grid-column:auto;}.contatos-config>summary span {display:none;}.contatos-toolbar button {flex:1 1 45%;}.contatos-fila-card #contatosFila {max-height:none;}}
+
+
+        /* v1.6.9.1 — Contatos no mesmo padrão visual de Vendedores */
+        #abaContatos .contatos-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+        #abaContatos .contatos-painel,#abaContatos .contatos-fila-card { width:100%; min-width:0; padding:22px; }
+        #abaContatos .contatos-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+        #abaContatos .contatos-grid .form-group:first-child { grid-column:auto; }
+        #abaContatos .contatos-grid .form-group { margin:0 0 10px; }
+        #abaContatos .contatos-grid select,#abaContatos .contatos-grid input { width:100%; min-width:0; }
+        #abaContatos .contatos-toolbar { margin:14px 0 10px; padding:12px 0; align-items:center; }
+        #abaContatos .contatos-toolbar button { border-radius:10px; }
+        #abaContatos #contatosElegiveis,#abaContatos #contatosFila { max-height:none; overflow:visible; }
+        #abaContatos .contatos-lista { display:grid; gap:8px; }
+        #abaContatos .contatos-linha { background:#fff; border:1px solid #e5e5e5; border-radius:13px; box-shadow:none; padding:13px 15px; }
+        #abaContatos .contatos-linha:hover { border-color:#d0d0d0; }
+        #abaContatos .contatos-linha:has(input:checked) { border-color:#d0252a; background:#fffafa; }
+        #abaContatos .contatos-conteudo { flex:1 1 220px; }
+        #abaContatos .contatos-linha strong { font-size:13px; font-weight:800; }
+        #abaContatos .contatos-linha small { font-size:11px; line-height:1.5; margin-top:4px; }
+        #abaContatos .contatos-acoes { gap:7px; }
+        #abaContatos .contatos-acoes button { padding:9px 12px; font-size:11px; border-radius:10px; }
+        #abaContatos .contatos-config { margin-top:12px; border-color:#e5e5e5; }
+        .contatos-lista-rodape { display:flex; gap:12px; justify-content:space-between; align-items:center; padding:12px 2px 2px; font-size:12px; color:#777; }
+        #abaContatos .contatos-fila-card .vendor-subtext { max-width:940px; }
+        body.dark-mode #abaContatos .contatos-linha { background:#323232; border-color:#515151; }
+        body.dark-mode #abaContatos .contatos-linha:has(input:checked) { background:#422b2c; border-color:#c74247; }
+        body.dark-mode .contatos-lista-rodape { color:#bbb; }
+        @media(max-width:920px) { #abaContatos .contatos-grid {grid-template-columns:repeat(2,minmax(0,1fr));} }
+        @media(max-width:590px) {
+          #abaContatos .contatos-painel,#abaContatos .contatos-fila-card { padding:16px; }
+          #abaContatos .contatos-grid {grid-template-columns:minmax(0,1fr);}
+          #abaContatos .contatos-toolbar { gap:7px; }
+          #abaContatos .contatos-toolbar span {flex:1 1 100%;}
+          #abaContatos .contatos-toolbar button {flex:1 1 calc(50% - 7px);}
+          #abaContatos .contatos-acoes button {flex:1 1 auto;}
+          .contatos-lista-rodape {align-items:flex-start;flex-wrap:wrap;}
+        }
+
+        /* 1.6.10 — Aparência: mesma hierarquia dos demais painéis */
+        .aparencia-grid {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.7fr);gap:18px;align-items:start;margin:16px 0 5px;}
+        .aparencia-grid input[type=file] {display:block;margin:12px 0 8px;max-width:100%;font-size:12px;}
+        .aparencia-preview {min-height:125px;display:flex;align-items:center;justify-content:center;border:1px dashed #c8c8c8;border-radius:13px;background:rgba(0,0,0,.02);padding:14px;}
+        .aparencia-preview img {max-width:260px;max-height:125px;object-fit:contain;}
+        .aparencia-ajuda {border:1px solid #e4e4e4;border-radius:13px;padding:17px;color:#555;font-size:12px;line-height:1.65;}
+        .aparencia-ajuda strong {display:block;color:inherit;margin-bottom:7px;}
+        .aparencia-acoes {display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:14px;}
+        .aparencia-acoes button,.aparencia-secondary {width:auto!important;margin:0!important;padding:10px 14px!important;font-size:12px!important;}
+        body.dark-mode .aparencia-preview,body.dark-mode .aparencia-ajuda {border-color:#5a5a5a;}
+        body.dark-mode .aparencia-ajuda {color:#ccc;}
+        @media(max-width:680px) {.aparencia-grid {grid-template-columns:1fr;}.aparencia-acoes button{flex:1 1 100%;}}
+    
+        /* v1.6.13 — painéis e filtros coesos */
+        .central-item{display:flex;flex-direction:column;height:100%;}
+        .central-item p{flex:1;min-height:0;}
+        .central-item button{margin-top:auto!important;}
+        #abaContatos .contatos-grid select,#abaContatos .contatos-grid input,
+        #abaLinks select,#abaLinks input[type="search"] {display:block;appearance:auto;box-sizing:border-box;min-height:43px;padding:10px 12px;border-radius:10px;border:1px solid #c9c9c9;font-family:inherit;font-size:13px;background:#fff;color:#292929;}
+        #abaContatos .contatos-grid select{max-width:none;}
+        body.dark-mode #abaContatos .contatos-grid select,body.dark-mode #abaContatos .contatos-grid input,
+        body.dark-mode #abaLinks select,body.dark-mode #abaLinks input[type="search"] {background:#343434;border-color:#626262;color:#f4f4f4;}
+        #abaLinks .vendor-link-tools{background:transparent;}
+        .campanha-geral-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:14px;align-items:end;}
+        @media(max-width:680px){.campanha-geral-grid{grid-template-columns:1fr;}}
+        .links-titulo-linha,.links-secao-topo {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+        .links-titulo-linha h2 {margin-bottom:6px;}
+        .links-atualizar{width:auto!important;margin:0!important;}
+        .links-secao-topo{margin:20px 0 12px;}
+        .links-secao-topo h3{font-size:15px;}
+        #abaLinks .links-secao-topo select{width:auto;min-width:190px;max-width:100%;}
+        .links-filiais-lista{display:flex;flex-direction:column;gap:12px;min-width:0;}
+        .links-ranking-box{border:1px solid #e0e0e0;border-radius:14px;padding:15px;max-height:735px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
+        .links-ordenacao{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+        #abaLinks .links-ordenacao select{max-width:100%;min-width:180px;}
+        .links-ranking-item{border-bottom:1px solid #e7e7e7;padding-bottom:12px;min-width:0;}
+        .links-ranking-item:last-child{border-bottom:0;padding-bottom:0;}
+        .links-ranking-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;line-height:1.5;}
+        .links-ranking-cabecalho span{min-width:0;overflow-wrap:anywhere;}
+        .links-ranking-cabecalho strong{color:#d0252a;margin-right:3px;}
+        .links-ranking-cabecalho small{white-space:nowrap;color:#777;}
+        .links-ranking-dados{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 13px;font-size:11px;margin-top:4px;}
+        .links-ranking-item .links-bar{margin-top:7px;}
+        body.dark-mode .links-ranking-box{border-color:#535353;}
+        body.dark-mode .links-ranking-item{border-color:#4c4c4c;}
+        body.dark-mode .links-ranking-cabecalho small{color:#bbb;}
+        @media(max-width:680px){.links-ordenacao{width:100%;}.links-ordenacao select{flex:1 1 100%;}.links-ranking-box{padding:11px;max-height:700px;}}
+
+        .links-filial-card{padding:14px;border:1px solid #e0e0e0;border-radius:13px;min-width:0;}
+        .links-filial-card summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+        .links-filial-card summary::-webkit-details-marker{display:none;}
+        .links-filial-name{font-weight:800;font-size:13px;overflow-wrap:anywhere;}
+        .links-filial-total{font-size:12px;color:#777;white-space:nowrap;}
+        .links-filial-stats{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:12px;margin-top:8px;}
+        .links-verde{color:#20854e;font-weight:700;}.links-vermelho{color:#b52b30;font-weight:700;}
+        .links-bar{display:flex;height:7px;border-radius:20px;background:#aaa;overflow:hidden;margin-top:12px;}
+        .links-bar .ok{background:#2e9863;}.links-bar .off{background:#cf454b;}.links-bar .pending{background:#aaa;}
+        .links-filial-detalhes{margin-top:14px;padding-top:12px;border-top:1px solid #ddd;font-size:12px;line-height:1.6;}
+        .links-filial-detalhes p{margin:4px 0;}
+        #abaLinks .vendor-link-filters{grid-template-columns:repeat(3,minmax(0,1fr));}
+        body.dark-mode .links-filial-card{border-color:#515151;}
+        body.dark-mode .links-filial-total{color:#bbb;}
+        @media(max-width:760px){#abaLinks .vendor-link-filters{grid-template-columns:1fr;} .links-titulo-linha{align-items:stretch;} .links-atualizar{width:100%!important;}}
+
+    </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
     <script>
@@ -25,11 +267,11 @@
                 });
             }
             // Limpar cache de versões antigas automaticamente
-            if (localStorage.getItem('cacheVersion') !== '1.4') {
+            if (localStorage.getItem('cacheVersion') !== '1.6.3') {
                 ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
                     try { localStorage.removeItem(k); } catch(e){}
                 });
-                try { localStorage.setItem('cacheVersion','1.4'); } catch(e){}
+                try { localStorage.setItem('cacheVersion','1.6.3'); } catch(e){}
             }
         })();
     </script>
@@ -46,6 +288,10 @@
         body { background:linear-gradient(135deg,#f5f5f5 0%,#e0e0e0 100%); min-height:100vh; padding:15px; }
         body.dark-mode { background:#1a1a1a; color:white; }
         body.dark-mode .admin-card { background:#2d2d2d; border-color:#444; }
+        #formAdicionarAdmin input { max-width:500px; }
+        .admin-email { overflow-wrap:anywhere; }
+        .admin-remover { cursor:pointer; border:1px solid #d0252a; color:#d0252a; background:transparent; padding:8px 12px; border-radius:10px; font-weight:bold; }
+        .admin-remover:disabled { opacity:.5; cursor:not-allowed; }
         body.dark-mode .form-group input,
         body.dark-mode .form-group textarea { background:#3d3d3d; color:white; border-color:#555; }
         body.dark-mode .oferta-card { background:#333; border-color:#555; }
@@ -63,6 +309,21 @@
         h2 { color:#333; margin:20px 0 15px; font-size:20px; }
         body.dark-mode h2 { color:#ddd; }
 
+        .admin-atalhos { display:flex; justify-content:space-between; align-items:center; margin:0 0 12px; gap:10px; }
+        .voltar-portal,.tema-admin { display:inline-flex; align-items:center; gap:8px; text-decoration:none; font:700 12px 'Montserrat',sans-serif; padding:11px 14px; border-radius:20px; border:1px solid #d0252a; color:#b21e24; background:white; cursor:pointer; }
+        .voltar-portal:hover,.tema-admin:hover { background:#fff1f2; }
+        body.dark-mode .voltar-portal,body.dark-mode .tema-admin { background:#2d2d2d; color:#ffb9bc; border-color:#ff7579; }
+        .resumo-campanhas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        @media(min-width:640px){.resumo-campanhas{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        .resumo-campanhas>div { background:#fafafa; border:1px solid #e5e5e5; border-radius:14px; padding:13px; }
+        .resumo-campanhas strong { display:block; font-size:25px; }
+        .resumo-campanhas span { display:block; color:#666; font-size:11px; font-weight:700; }
+        body.dark-mode .resumo-campanhas>div { background:#353535; border-color:#555; }
+        body.dark-mode .resumo-campanhas span { color:#bbb; }
+        body.dark-mode .upload-area { background:#3b282a; border-color:#ff7679; }
+        body.dark-mode .upload-area p { color:#ddd; }
+        body.dark-mode .empty-state { background:#383838; color:#ddd; border-color:#666; }
+        body.dark-mode .oferta-card.ativa { background:#183e2b; }
         /* LOGIN */
         .login-box { text-align:center; padding:30px 15px; }
         .login-box img { max-width:180px; margin-bottom:25px; }
@@ -175,20 +436,195 @@
         .notificacao-saindo  { animation:slideOut .3s ease forwards; }
         @keyframes slideIn { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
         @keyframes slideOut{ from{transform:translateX(0);opacity:1} to{transform:translateX(110%);opacity:0} }
+
+        /* ABAS DO ADMIN */
+        [hidden] { display:none !important; }
+        .admin-tabs { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 18px; }
+        .admin-tab { flex:1; min-width:150px; border:1px solid #ddd; border-radius:14px; padding:13px 16px; background:#fff; color:#555; font-weight:800; cursor:pointer; transition:.2s; }
+        .admin-tab i { margin-right:7px; }
+        .admin-tab.active { background:#d0252a; border-color:#d0252a; color:#fff; box-shadow:0 5px 14px rgba(208,37,42,.2); }
+        body.dark-mode .admin-tab { background:#2d2d2d; color:#ddd; border-color:#555; }
+        body.dark-mode .admin-tab.active { background:#d0252a; color:#fff; border-color:#d0252a; }
+        .vendor-help { background:#eef5ff; border-left:4px solid #2874c6; border-radius:10px; padding:13px 15px; color:#345; font-size:13px; line-height:1.55; margin:12px 0 18px; }
+        body.dark-mode .vendor-help { background:#1e3a5f; color:#d6e5f5; }
+        .vendor-config-grid { display:grid; grid-template-columns:1fr; gap:12px; }
+        @media(min-width:700px) { .vendor-config-grid { grid-template-columns:1fr 1fr; } }
+        .vendor-config-grid .form-group { margin-bottom:8px; }
+        .vendor-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+        .vendor-actions button { width:auto; flex:1; min-width:170px; }
+        .vendor-status { display:flex; align-items:center; gap:9px; padding:12px 14px; background:#f5f5f5; border-radius:12px; color:#555; font-size:13px; margin-top:14px; }
+        body.dark-mode .vendor-status { background:#383838; color:#ddd; }
+        .vendor-status.ok { background:#e8f6ec; color:#176b31; }
+        body.dark-mode .vendor-status.ok { background:#173d25; color:#c9f0d3; }
+        .vendor-status.error { background:#fdebec; color:#9b1c25; }
+        body.dark-mode .vendor-status.error { background:#4a2024; color:#ffd7da; }
+        .vendor-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+        @media(min-width:700px) { .vendor-kpis { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+        .vendor-kpi { background:#f7f7f7; border:1px solid #e8e8e8; border-radius:14px; padding:15px; min-width:0; }
+        body.dark-mode .vendor-kpi { background:#333; border-color:#4a4a4a; }
+        .vendor-kpi strong { display:block; font-size:25px; margin-bottom:4px; color:#333; }
+        body.dark-mode .vendor-kpi strong { color:#fff; }
+        .vendor-kpi span { color:#777; font-size:11px; font-weight:700; text-transform:uppercase; }
+         .vendor-filters { display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:15px; }
+        @media(min-width:700px) and (max-width:1099px) { .vendor-filters { grid-template-columns:2fr 1fr; } }
+        @media(min-width:1100px) { .vendor-filters { grid-template-columns:2fr 1fr 1fr 1fr; } }
+        .vendor-filters input,.vendor-filters select { width:100%; padding:13px; border:2px solid #ddd; border-radius:10px; font-size:14px; background:#fff; color:#333; }
+        body.dark-mode .vendor-filters input, body.dark-mode .vendor-filters select { background:#3d3d3d; border-color:#555; color:#fff; }
+        .vendor-table-wrap { overflow-x:auto; border:1px solid #e5e5e5; border-radius:12px; }
+        body.dark-mode .vendor-table-wrap { border-color:#4b4b4b; }
+        .vendor-table { width:100%; border-collapse:collapse; min-width:760px; font-size:12px; }
+        .vendor-table th { background:#f1f1f1; color:#555; text-align:left; padding:12px 10px; white-space:nowrap; }
+        .vendor-table td { border-top:1px solid #ececec; padding:11px 10px; color:#444; vertical-align:middle; }
+        body.dark-mode .vendor-table th { background:#3a3a3a; color:#eee; }
+        body.dark-mode .vendor-table td { border-color:#4a4a4a; color:#ddd; }
+        .vendor-table tr:hover td { background:rgba(208,37,42,.045); }
+        .vendor-badge { display:inline-block; padding:5px 8px; border-radius:30px; font-size:10px; font-weight:800; white-space:nowrap; }
+        .vendor-badge.in { background:#e4f5e8; color:#176b31; }
+        .vendor-badge.out { background:#fff0df; color:#9a5200; }
+        .vendor-badge.review { background:#fff7d6; color:#7c5a00; }
+        .vendor-badge.unknown { background:#eee; color:#555; }
+        body.dark-mode .vendor-badge.in { background:#173d25; color:#c9f0d3; }
+        body.dark-mode .vendor-badge.out { background:#493016; color:#ffd6a3; }
+        body.dark-mode .vendor-badge.review { background:#4a3c12; color:#ffe89b; }
+        body.dark-mode .vendor-badge.unknown { background:#484848; color:#ddd; }
+        .vendor-pagination { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; color:#777; font-size:12px; }
+        .vendor-pagination button { width:auto; padding:9px 14px; border:0; border-radius:9px; background:#555; color:white; cursor:pointer; font-weight:700; }
+        .vendor-pagination button:disabled { opacity:.35; cursor:not-allowed; }
+        .vendor-empty { text-align:center; padding:28px; color:#777; }
+        .vendor-last-update { color:#888; font-size:11px; margin-top:10px; }
+        .btn-outline { background:transparent; color:#d0252a; border:2px solid #d0252a; padding:12px 18px; border-radius:50px; font-weight:800; cursor:pointer; }
+        body.dark-mode .btn-outline { color:#ff8589; border-color:#ff8589; }
+
+        .vendor-small-btn { padding:8px 10px; border:0; border-radius:8px; background:#555; color:white; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+        .vendor-small-btn.primary { background:#d0252a; }
+        .vendor-small-btn:disabled { opacity:.5; cursor:not-allowed; }
+        .vendor-inline-input { width:100%; min-width:120px; padding:9px 10px; border:1px solid #d8d8d8; border-radius:8px; background:#fff; color:#333; font-size:12px; }
+        body.dark-mode .vendor-inline-input { background:#383838; border-color:#555; color:#fff; }
+        .vendor-management-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+        .vendor-table.management { min-width:780px; }
+        .vendor-badge.success { background:#e4f5e8; color:#176b31; }
+        .vendor-badge.inactive { background:#fdebec; color:#9b1c25; }
+        body.dark-mode .vendor-badge.success { background:#173d25; color:#c9f0d3; }
+        body.dark-mode .vendor-badge.inactive { background:#4a2024; color:#ffd7da; }
+        .vendor-modal { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,.58); display:none; align-items:center; justify-content:center; padding:18px; }
+        .vendor-modal-card { width:100%; max-width:520px; max-height:90vh; overflow:auto; background:#fff; color:#333; padding:24px; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+        body.dark-mode .vendor-modal-card { background:#2d2d2d; color:#eee; }
+        .vendor-modal-card h2 { margin-top:0; }
+        .vendor-modal-card .form-group input { font-size:14px; }
+        .vendor-modal-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+        .vendor-modal-actions button { flex:1; min-width:130px; }
+        .vendor-checker-config { display:grid; grid-template-columns:1fr; gap:10px; align-items:end; }
+        @media(min-width:700px) { .vendor-checker-config { grid-template-columns:2fr auto auto; } }
+        .vendor-checker-config input { width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:13px; }
+        body.dark-mode .vendor-checker-config input { background:#3d3d3d; color:white; border-color:#555; }
+        .vendor-import-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; }
+        @media(min-width:700px) { .vendor-import-summary { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+        .vendor-import-kpi { border:1px solid #e5e5e5; background:#fafafa; padding:12px; border-radius:12px; }
+        .vendor-import-kpi strong { display:block; font-size:22px; color:#333; }
+        .vendor-import-kpi span { display:block; font-size:10px; font-weight:800; color:#777; text-transform:uppercase; margin-top:3px; }
+        body.dark-mode .vendor-import-kpi { background:#333; border-color:#4a4a4a; }
+        body.dark-mode .vendor-import-kpi strong { color:#fff; }
+        .vendor-import-table { width:100%; border-collapse:collapse; min-width:520px; font-size:12px; margin-top:12px; }
+        .vendor-import-table th,.vendor-import-table td { padding:9px; border-bottom:1px solid #e8e8e8; text-align:left; }
+        .vendor-import-table th { background:#f1f1f1; color:#555; }
+        body.dark-mode .vendor-import-table th { background:#3a3a3a; color:#eee; }
+        body.dark-mode .vendor-import-table td { border-color:#4a4a4a; color:#ddd; }
+        .vendor-import-preview-scroll { overflow-x:auto; max-height:300px; overflow-y:auto; border:1px solid #e5e5e5; border-radius:10px; }
+        .vendor-import-warning { background:#fff7df; border-left:4px solid #d69e36; padding:12px; border-radius:9px; color:#6b4f00; font-size:12px; line-height:1.5; margin:12px 0; }
+        body.dark-mode .vendor-import-warning { background:#473912; color:#ffe9a6; }
+        .vendor-subtext { color:#777; font-size:12px; line-height:1.55; margin:8px 0 14px; }
+        body.dark-mode .vendor-subtext { color:#bbb; }
+        .vendor-checkbox { display:flex; align-items:center; gap:9px; font-size:13px; color:#555; margin-top:10px; }
+        body.dark-mode .vendor-checkbox { color:#ddd; }
+        .vendor-checkbox input { width:18px; height:18px; }
+        .environment-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; margin:8px 0; border-radius:999px; background:#fff3cd; color:#805b00; border:1px solid #f0d98a; font-size:11px; font-weight:800; letter-spacing:.45px; }
+        body.dark-mode .environment-badge { background:#4a3b12; color:#ffe08a; border-color:#80651d; }
+        /* v1.6.12 — cartões de vendedor alinhados sem quebrar telefones */
+        .vendor-entry {
+            grid-template-columns:minmax(135px,1.45fr) minmax(110px,.85fr) minmax(167px,1.05fr) minmax(108px,.85fr) auto;
+            gap:clamp(10px,1.1vw,19px);
+            align-items:center;
+        }
+        .vendor-entry-main,.vendor-entry-field { align-self:center; }
+        .vendor-entry-phone strong {
+            display:block; white-space:nowrap; overflow:visible;
+            font-variant-numeric:tabular-nums; font-size:clamp(11.5px,1.05vw,14px);
+            letter-spacing:-.025em; line-height:1.5;
+        }
+        .vendor-entry-phone small { white-space:nowrap; }
+        .vendor-entry-actions { align-items:center; justify-content:flex-end; flex-wrap:nowrap; }
+        .vendor-entry-actions .vendor-small-btn { white-space:nowrap; }
+        .vendor-contact-btn { background:#1d7e50; }
+        .vendor-contact-btn:hover { background:#16663f; }
+        @media(max-width:1150px){
+            .vendor-entry { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+            .vendor-entry-actions { grid-column:1/-1; justify-content:flex-start; flex-wrap:wrap; }
+            .vendor-entry-phone strong { font-size:14px; }
+        }
+        @media(max-width:600px){
+            .vendor-entry { grid-template-columns:1fr; }
+            .vendor-entry-actions { grid-column:auto; }
+        }
+        /* Carregamento de sessão sem piscar a tela de login */
+        #loginBox[data-restaurando="true"] #btnEntrar { display:none; }
+        .login-restaurando { font-size:13px; color:#666; padding:12px; }
+        body.dark-mode .login-restaurando { color:#ccc; }
+        /* Central de configurações — padrões visuais existentes */
+        .central-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,255px),1fr)); gap:13px; }
+        .central-item { border:1px solid #e5e5e5; border-radius:13px; padding:16px; min-width:0; }
+        .central-item h3 {font-size:15px;margin:0 0 8px;}
+        .central-item p {font-size:12px;color:#777;line-height:1.5;min-height:44px;}
+        .central-item button { width:100%; margin-top:10px; font-size:12px; padding:10px; }
+        .central-preferencias {margin-top:18px;padding-top:16px;border-top:1px solid #e5e5e5;}
+        .central-preferencias label {display:block;font-size:12px;font-weight:800;margin-bottom:7px;}
+        .central-preferencias select {min-width:180px;max-width:100%;padding:10px;border-radius:9px;border:1px solid #ccc;color:inherit;background:transparent;}
+        body.dark-mode .central-item {border-color:#4f4f4f;}
+        body.dark-mode .central-item p {color:#c2c2c2;}
+        body.dark-mode .central-preferencias {border-color:#4f4f4f;}
+        body.dark-mode .central-preferencias select {border-color:#666;background:#343434;}
+
+    
+        /* v1.6.16 — acabamento: foco acessível, filtros proporcionais e área de ações estável. */
+        :is(#painelAdmin, #loginBox) :is(button, a, input, select, textarea, summary):focus-visible {
+            outline: 3px solid #dc4046;
+            outline-offset: 3px;
+        }
+        .admin-tab, .vendor-small-btn, .btn-outline { transition: background-color .15s ease, border-color .15s ease; }
+        .vendor-actions > button { min-width:0; }
+        #gestaoParticipantesGrupo .vendor-actions { align-items:stretch; }
+        #gestaoParticipantesGrupo .vendor-actions button { flex:1 1 210px; }
+        #abaVendedores .vendor-cards, #abaLinks .links-ranking-box { min-width:0; }
+        .vendor-status { overflow-wrap:anywhere; }
+        @media(max-width:650px) {
+            .admin-card { min-width:0; }
+            .vendor-pagination { align-items:stretch; }
+            .vendor-pagination > div { flex-wrap:wrap; }
+            #gestaoParticipantesGrupo .vendor-actions button { flex:1 1 100%; }
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .admin-tab,.vendor-small-btn,.btn-outline { transition:none; }
+        }
+
     </style>
 </head>
 <body>
 <div class="admin-container">
+    <div class="admin-atalhos">
+        <a href="index.html" class="voltar-portal"><i class="fas fa-arrow-left"></i> VOLTAR AO PORTAL</a>
+        <button type="button" class="tema-admin dark-mode-toggle" onclick="TEMA.toggle()" aria-label="Alternar modo claro ou escuro" title="Alternar tema"><i class="fas fa-moon"></i> <span>TEMA</span></button>
+    </div>
 
     <!-- LOGIN -->
-    <div class="admin-card" id="loginBox">
+    <div class="admin-card" id="loginBox" data-restaurando="true">
         <div class="login-box">
             <img src="img/logo.png" alt="Martinello">
-            <h2>Acesso Restrito</h2>
-            <input type="password" id="senhaInput" placeholder="Digite sua senha">
-            <div id="infoBloqueio"></div>
-            <button id="btnEntrar" onclick="login()" style="margin-top:12px;">ENTRAR</button>
-            <p style="margin-top:15px;font-size:12px;color:#888;">🔐 Sessão expira em 4h por segurança</p>
+            <div class="environment-badge" data-mart-env-badge>✓ PORTAL OFICIAL</div>
+            <h2 id="tituloLogin">Acesso Restrito</h2>
+            <p id="instrucaoLogin" style="font-size:13px;color:#666;line-height:1.6;margin:12px 0;">Acesso com uma conta Google autorizada. Não há senha compartilhada no site.</p>
+            <p id="loginStatus" role="alert" style="display:none;color:#a21d20;font-size:12px;margin:12px 0;overflow-wrap:anywhere;"></p>
+            <p id="loginRestaurando" class="login-restaurando" role="status">Verificando sua sessão e autorização...</p>
+            <button id="btnEntrar" onclick="login()" style="margin-top:12px;"><i class="fab fa-google"></i> ENTRAR COM GOOGLE</button>
+            <p style="margin-top:15px;font-size:12px;color:#888;">A autorização é conferida no Apps Script antes de abrir o painel.</p>
         </div>
     </div>
 
@@ -199,26 +635,82 @@
         <div class="admin-card">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;">
                 <div style="display:flex;align-items:center;">
-                    <h1>⚙️ AGENDADOR</h1>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <h1 id="tituloAdmin">⚙️ AGENDADOR</h1>
+                        <span class="environment-badge" data-mart-env-badge>✓ PORTAL OFICIAL</span>
+                    </div>
                     <button class="logout-button" onclick="logout()">SAIR</button>
                 </div>
                 <div class="toolbar">
-                    <button class="btn-nova" onclick="mostrarNovaOferta()">
+                    <button class="btn-nova" id="btnNovaOfertaTopo" onclick="mostrarNovaOferta()">
                         <i class="fas fa-plus"></i> NOVA OFERTA
                     </button>
                 </div>
             </div>
-            <p style="color:#888;font-size:13px;margin-top:8px;">Apenas UMA oferta fica ativa por vez</p>
+            <p id="subtituloAdmin" style="color:#888;font-size:13px;margin-top:8px;">Várias ofertas podem ficar disponíveis ao mesmo tempo</p>
         </div>
 
+        <!-- NAVEGAÇÃO DO ADMIN -->
+        <nav class="admin-tabs" aria-label="Seções administrativas">
+            <button type="button" class="admin-tab active" id="tabOfertas" onclick="AdminPresenter.mostrarAba('ofertas')">
+                <i class="fas fa-tags"></i> OFERTAS
+            </button>
+            <button type="button" class="admin-tab" id="tabDashboard" onclick="AdminPresenter.mostrarAba('dashboard')">
+                <i class="fas fa-chart-line"></i> DASHBOARD
+            </button>
+            <button type="button" class="admin-tab" id="tabLinks" onclick="AdminPresenter.mostrarAba('links')"><i class="fas fa-link"></i> LINKS MARTINELLO</button>
+            <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
+                <i class="fas fa-users"></i> VENDEDORES
+            </button>
+            <button type="button" class="admin-tab" id="tabContatos" onclick="AdminPresenter.mostrarAba('contatos')">
+                <i class="fab fa-whatsapp"></i> CONTATOS
+            </button>
+            <button type="button" class="admin-tab" id="tabAparencia" onclick="AdminPresenter.mostrarAba('aparencia')">
+                <i class="fas fa-palette"></i> APARÊNCIA
+            </button>
+            <button type="button" class="admin-tab" id="tabConfiguracoes" onclick="AdminPresenter.mostrarAba('configuracoes')">
+                <i class="fas fa-sliders-h"></i> CONFIGURAÇÕES
+            </button>
+            <button type="button" class="admin-tab" id="tabAcessos" onclick="AdminPresenter.mostrarAba('acessos')" style="display:none;">
+                <i class="fas fa-user-shield"></i> ACESSOS
+            </button>
+        </nav>
+
+        <section id="abaOfertas" class="aba-conteudo">
         <!-- ALERTA SEM OFERTA -->
         <div id="bannerSemOferta" class="admin-card" style="display:none;">
             ⚠️ Nenhuma oferta ativa agora! Os vendedores estão vendo a tela "EM BREVE".
         </div>
 
+        <div id="resumoCampanhas" class="admin-card" aria-label="Resumo de campanhas">
+            <h2>VISÃO GERAL DAS CAMPANHAS</h2>
+            <div class="resumo-campanhas">
+                <div><strong id="totalOfertas">0</strong><span>Total cadastradas</span></div>
+                <div><strong id="ofertasAtivas">0</strong><span>Ativas agora</span></div>
+                <div><strong id="ofertasAgendadas">0</strong><span>Agendadas</span></div>
+                <div><strong id="ofertasEncerradas">0</strong><span>Encerradas</span></div>
+            </div>
+            <p class="vendor-subtext" style="margin-top:12px;">Confira os inícios de compartilhamento e os rankings na aba <strong>Dashboard</strong>.</p>
+        </div>
+        <div class="admin-card" id="painelCampanhaGeral">
+            <h2><i class="fas fa-bullhorn"></i> CAMPANHA GERAL</h2>
+            <p class="vendor-subtext">Usada nas ofertas sem campanha individual. A atribuição interna funciona sem alterar o link compacto da Martinello.</p>
+            <div class="campanha-geral-grid">
+                <div class="form-group"><label for="campanhaGeral">Identificador da campanha</label>
+                    <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"></div>
+                <div class="form-group"><label for="linkGrupoCompacto">Link compacto enviado no grupo</label>
+                    <input id="linkGrupoCompacto" type="url" placeholder="https://www.martinello.com.br/ofertasvendedor"></div>
+            </div>
+            <div class="vendor-actions" style="margin-top:10px">
+                <button type="button" id="btnSalvarCampanhas" class="btn-primary" onclick="CampanhasPresenter.salvar()" style="width:auto"><i class="fas fa-save"></i> SALVAR CAMPANHA</button>
+                <button type="button" class="btn-outline" onclick="CampanhasPresenter.carregar()" style="width:auto">ATUALIZAR</button>
+            </div>
+            <p id="statusCampanhaGeral" class="vendor-last-update" role="status">Carregando configuração...</p>
+        </div>
         <!-- LISTA -->
         <div class="admin-card">
-            <h2>📋 OFERTAS PROGRAMADAS</h2>
+            <h2>📋 OFERTAS PROGRAMADAS (SIMULTÂNEAS PERMITIDAS)</h2>
+            <p id="estadoSyncOfertas" class="vendor-subtext" role="status" style="margin-bottom:12px;">Conectando às atualizações das ofertas…</p>
             <div id="listaOfertas"></div>
         </div>
 
@@ -229,7 +721,11 @@
             </button>
             <h2 id="formTitulo">➕ NOVA OFERTA</h2>
             <input type="hidden" id="editandoIdx">
+            <p id="avisoConflitoOferta" role="alert" class="vendor-status" style="display:none;color:#b3232a; border:1px solid #dc6c73; padding:12px; border-radius:10px; margin:12px 0;"></p>
 
+            <div class="info-box">
+                <strong>Várias ofertas simultâneas:</strong> você pode cadastrar campanhas com o mesmo período. Todas aparecerão no portal para escolha do vendedor.
+            </div>
             <div class="info-box">
                 <strong>🕒 Horário de Brasília</strong> — Use sempre o horário de Brasília ao cadastrar.
             </div>
@@ -250,6 +746,11 @@
                 <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/...">
             </div>
 
+            <div class="form-group">
+                <label for="campanhaOferta">Campanha individual (opcional)</label>
+                <input id="campanhaOferta" maxlength="60" placeholder="Vazio = usar campanha geral" autocomplete="off">
+                <small class="vendor-subtext">Quando preenchida, esta campanha substitui a geral apenas nesta oferta.</small>
+            </div>
             <div class="form-group">
                 <label>🖼️ IMAGEM DA OFERTA</label>
                 <div class="upload-area" id="dropArea">
@@ -293,18 +794,34 @@
             </div>
         </div>
 
-        <!-- CONFIG EM BREVE -->
+        </section><!-- /abaOfertas -->
+
+        <section id="abaAparencia" class="aba-conteudo" style="display:none;">
+          <div class="admin-card">
+            <h2><i class="fas fa-palette"></i> IDENTIDADE VISUAL DO PORTAL</h2>
+            <p class="vendor-subtext">As alterações aparecem no portal oficial para todos os vendedores, sem editar o GitHub. Não afeta a imagem dos banners das ofertas.</p>
+            <div class="aparencia-grid">
+              <div class="form-group">
+                <label for="fileLogoPortal">LOGO DO PORTAL</label>
+                <div class="aparencia-preview"><img id="previewLogoPortal" src="img/logo.png" alt="Prévia da logo"></div>
+                <input id="fileLogoPortal" type="file" accept="image/png,image/jpeg,image/webp" onchange="AdminPresenter.previewLogoPortal(event)">
+                <button type="button" class="btn-outline aparencia-secondary" onclick="AdminPresenter.restaurarLogoPortal()">USAR LOGO ORIGINAL</button>
+              </div>
+              <div class="aparencia-ajuda"><strong>Antes de publicar</strong><p>Confira a logo e a tela “Em breve”. Imagens são reduzidas automaticamente para evitar lentidão. O botão Salvar publica as alterações para todos os visitantes.</p></div>
+            </div>
+          </div>
+        <!-- CONFIG EM BREVE — agora sincronizada entre dispositivos -->
         <div class="admin-card">
             <h2>⚙️ TELA "EM BREVE"</h2>
-            <p style="margin-bottom:20px;color:#888;">Personaliza a aparência quando não há oferta ativa.</p>
+            <p style="margin-bottom:20px;color:#888;">Título, mensagem e imagem exibidos quando não há oferta ativa. Salve para publicar em todos os dispositivos.</p>
 
             <div class="form-group">
-                <label>🖼️ IMAGEM DE FUNDO</label>
+                <label>🖼️ IMAGEM PADRÃO (QUANDO NÃO HÁ OFERTAS)</label>
                 <div class="upload-area" id="dropAreaPadrao">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p><strong>Clique ou arraste a imagem padrão</strong></p>
-                    <p style="font-size:14px;">PNG, JPG ou GIF (até 5MB)</p>
-                    <input type="file" id="filePadrao" accept="image/*" style="display:none;">
+                    <p style="font-size:14px;">PNG, JPG ou WebP (otimizada automaticamente)</p>
+                    <input type="file" id="filePadrao" accept="image/png,image/jpeg,image/webp" style="display:none;">
                 </div>
                 <img id="previewPadrao" class="preview-image" src="img/produto.png">
             </div>
@@ -319,22 +836,453 @@
                 <textarea id="mensagemPadrao" rows="3">Estamos preparando novidades especiais para você! Fique ligado.</textarea>
             </div>
 
-            <button class="btn-primary" onclick="salvarConfigPadrao()">💾 SALVAR CONFIGURAÇÕES</button>
+            <div class="aparencia-acoes"><button type="button" class="btn-outline aparencia-secondary" onclick="AdminPresenter.restaurarImagemPadrao()">USAR IMAGEM ORIGINAL</button><button type="button" class="btn-primary" id="btnSalvarAparencia" onclick="salvarConfigPadrao()"><i class="fas fa-save"></i> SALVAR APARÊNCIA</button></div><p id="aparenciaStatus" role="status" class="vendor-subtext"></p>
         </div>
+        </section><!-- /abaAparencia -->
+
+        <section id="abaDashboard" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-chart-bar" style="color:#d0252a"></i> DESEMPENHO DO PORTAL</h2>
+                <div class="dashboard-filtros">
+                    <label for="dashboardPeriodo">PERÍODO</label>
+                    <select id="dashboardPeriodo" onchange="DashboardPresenter.atualizar()">
+                        <option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option>
+                        <option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option>
+                    </select>
+                    <label for="dashboardFiltroCampanha">Campanha</label>
+                    <select id="dashboardFiltroCampanha" onchange="DashboardPresenter.renderizar()"><option value="">Todas as campanhas</option></select>
+                    <label for="dashboardFiltroOferta">OFERTA</label>
+                    <select id="dashboardFiltroOferta" onchange="DashboardPresenter.renderizar()"><option value="">Todas as ofertas</option></select>
+                    <button type="button" class="btn-outline" id="dashboardAtualizar" onclick="DashboardPresenter.atualizar()" style="width:auto;margin:0"><i class="fas fa-sync-alt"></i> ATUALIZAR</button>
+                </div>
+                <div id="dashboardStatus" class="vendor-status" role="status">Selecione esta aba para carregar os dados.</div>
+                <div class="dashboard-grade" aria-label="Indicadores de utilização">
+                    <div class="dashboard-metrica"><strong id="dashAcessosPortal">0</strong><span>ACESSOS AO PORTAL</span></div>
+                    <div class="dashboard-metrica"><strong id="dashAcessosWhatsApp">0</strong><span>VIA LINK IDENTIFICADO DO GRUPO</span></div>
+                    <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashCliques">0</strong><span>CLIQUES RASTREADOS (HISTÓRICO)</span></div>
+                    <div class="dashboard-metrica"><strong id="dashMaisPopular" style="font-size:16px">—</strong><span>OFERTA MAIS ACIONADA</span></div>
+                </div>
+                <div class="vendor-actions" style="margin:9px 0"><button type="button" class="btn-outline" style="width:auto" onclick="DashboardPresenter.copiarLinkGrupo()"><i class="fas fa-link"></i> COPIAR LINK COMPACTO DO GRUPO</button></div>
+                <p class="dashboard-explicacao">O link compacto do grupo permanece sem parâmetros: a campanha é atribuída no portal conforme a configuração vigente no momento da visita. Sem tag de origem, não é possível garantir que uma visita veio do grupo. Os links enviados ao cliente agora seguem diretamente o domínio oficial da Martinello. O histórico de cliques rastreados anteriormente permanece disponível, mas novas visitas ao link oficial não são mensuradas diretamente neste painel. A medição de cliques reais poderá voltar com apoio do domínio oficial ou futura integração ao Analytics. Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
+                <p class="dashboard-explicacao" id="dashboardAvisoBase"></p>
+            </div>
+            <div class="admin-card dashboard-ranking-grid">
+                <div class="dashboard-ranking"><h3>🔗 OFERTAS / PRODUTOS MAIS CLICADOS</h3><div id="dashRankingCliquesOfertas"></div></div>
+                <div class="dashboard-ranking"><h3>👥 CLIQUES POR VENDEDOR</h3><div id="dashRankingCliquesVendedores"></div></div>
+                <div class="dashboard-ranking"><h3>🏬 CLIQUES POR FILIAL</h3><div id="dashRankingCliquesFiliais"></div></div>
+                <div class="dashboard-ranking"><h3>🏆 OFERTAS MAIS ACIONADAS</h3><div id="dashRankingOfertas"></div></div>
+                <div class="dashboard-ranking"><h3>👥 VENDEDORES MAIS ATIVOS</h3><div id="dashRankingVendedores"></div></div>
+                <div class="dashboard-ranking"><h3>🏬 UTILIZAÇÃO POR FILIAL</h3><div id="dashRankingFiliais"></div></div>
+                <div class="dashboard-ranking"><h3>📅 DIAS COM MAIS INÍCIOS</h3><div id="dashEvolucao"></div></div>
+            </div>
+        </section><!-- /abaDashboard -->
+
+        <section id="abaLinks" class="aba-conteudo" style="display:none;">
+          <div class="admin-card">
+            <div class="links-titulo-linha"><div><h2><i class="fas fa-link"></i> LINKS MARTINELLO</h2><p class="vendor-subtext">Resumo dos vendedores ativos, organizado por filial.</p></div><button class="btn-outline links-atualizar" type="button" onclick="VendedoresPresenter.atualizar()"><i class="fas fa-sync-alt"></i> ATUALIZAR</button></div>
+            <div class="dashboard-grade links-kpis">
+              <div class="dashboard-metrica"><strong id="linksTotalAtivos">—</strong><span>VENDEDORES ATIVOS</span></div>
+              <div class="dashboard-metrica"><strong id="linksTotalCadastrados">—</strong><span>CADASTRADOS (REDIRECIONAM)</span></div>
+              <div class="dashboard-metrica"><strong id="linksTotalSemCadastro">—</strong><span>SEM CADASTRO</span></div>
+              <div class="dashboard-metrica"><strong id="linksTotalPendentes">—</strong><span>SEM RESULTADO CONCLUSIVO</span></div>
+            </div>
+            <div class="links-secao-topo"><h3>Links por filial</h3><div class="links-ordenacao">
+              <select id="linksDashboardFilial" aria-label="Filtrar dashboard dos links por filial" onchange="VendedoresPresenter.renderizarPainelLinks()"><option value="">Todas as filiais</option></select>
+              <select id="linksOrdemFiliais" aria-label="Ordenar filiais por quantidade sem cadastro" onchange="VendedoresPresenter.renderizarPainelLinks()">
+                <option value="numero">Número da filial (crescente)</option>
+                <option value="mais-sem">Mais vendedores sem cadastro</option>
+                <option value="menos-sem">Menos vendedores sem cadastro</option>
+              </select>
+            </div></div>
+            <div class="links-ranking-box"><div id="linksFiliaisLista" class="links-filiais-lista" role="list" aria-live="polite"><p class="vendor-subtext">Carregando filiais…</p></div></div>
+            <p id="linksResumoOrdenacao" class="vendor-last-update"></p>
+            <p class="dashboard-explicacao">“Cadastrado” indica redirecionamento observado; “Sem cadastro” indica retorno de ausência/localhost. Erros ou respostas inconclusivas ficam pendentes, sem classificação automática.</p>
+          </div>
+          <div class="admin-card">
+            <div id="painelGestaoVendedores" style="display:none;" class="vendor-link-panel">
+                <details class="vendor-tools vendor-link-tools" id="painelLinks">
+                    <summary><span><i class="fas fa-link"></i> VERIFICAÇÃO DOS LINKS</span><span class="vendor-tools-help">Consulta e resultados</span></summary>
+                    <p class="vendor-subtext">Os resultados são indicativos. Redirecionamentos e códigos HTTP não comprovam, isoladamente, a situação cadastral.</p>
+                    <div class="vendor-link-actions">
+                      <button type="button" class="btn-outline" id="btnVerificarPendentes" onclick="VendedoresPresenter.verificarLinksEmLote('pendentes')"><i class="fas fa-search"></i> VERIFICAR NÃO VERIFICADOS</button>
+                      <button type="button" class="btn-primary" id="btnVerificarTodos" onclick="VendedoresPresenter.verificarLinksEmLote('todos')"><i class="fas fa-sync-alt"></i> VERIFICAÇÃO GERAL</button>
+                      <button type="button" class="vendor-quiet-btn" id="btnCancelarLinks" onclick="VendedoresPresenter.cancelarVerificacaoLinks()" hidden>PARAR</button>
+                    </div>
+                    <p class="vendor-last-update" id="statusVerificacaoLinks" role="status" aria-live="polite">Escolha uma verificação. O sistema consulta em lotes de até 30.</p>
+                    <div class="vendor-link-filters">
+                      <select id="filtroLinkGeral" aria-label="Filtrar status do link" onchange="VendedoresPresenter.filtrarLinks()">
+                        <option value="todos">Todos os links</option>
+                        <option value="sem-link">Não verificados</option>
+                        <option value="inativo">Sem cadastro</option>
+                        <option value="redirecionamento">Cadastrados</option>
+                      </select>
+                      <select id="filtroFilialLinks" aria-label="Filtrar links por filial" onchange="VendedoresPresenter.filtrarLinks()"><option value="">Todas as filiais</option></select>
+                      <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.agendarBuscaLinks()">
+                    </div>
+                    <div id="resumoLinks" class="vendor-last-update"></div>
+                    <div id="listaLinks" class="vendor-links-lista" role="list" aria-live="polite"></div>
+                    <div class="vendor-actions vendor-centered-actions">
+                      <button type="button" id="btnMaisLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMaisLinks()" hidden>Mostrar mais links</button>
+                      <button type="button" id="btnMenosLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMenosLinks()" hidden>Mostrar menos</button>
+                    </div>
+                </details>
+            </div>
+          </div>
+        </section><!-- /abaLinks -->
+
+        <section id="abaVendedores" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
+                <p class="vendor-subtext">Consulte e edite os vendedores, telefones e situação no grupo em um só lugar.</p>
+                <div class="vendor-actions">
+                    <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
+                </div>
+                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Os vendedores serão carregados automaticamente após o acesso.</span></div>
+                <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
+            </div>
+
+            <div class="admin-card" id="painelDadosVendedores" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <h2 style="margin:0;">VISÃO GERAL</h2>
+                    <button type="button" class="btn-primary" onclick="VendedoresPresenter.abrirNovoCadastro()" style="width:auto;margin:0;"><i class="fas fa-user-plus"></i> NOVO VENDEDOR</button>
+                </div>
+                <div class="vendor-kpis" style="margin-top:16px;">
+                    <div class="vendor-kpi"><strong id="kpiTotalAtivos">0</strong><span>Cadastros ativos</span></div>
+                    <div class="vendor-kpi"><strong id="kpiTelefoneValidado">0</strong><span>Telefones validados</span></div>
+                    <div class="vendor-kpi"><strong id="kpiTelefonePendente">0</strong><span>Telefones pendentes</span></div>
+                    <div class="vendor-kpi"><strong id="kpiTotalInativos">0</strong><span>Cadastros inativos</span></div>
+                    <div class="vendor-kpi"><strong id="kpiNoGrupo">—</strong><span>Vendedores no grupo</span></div>
+                    <div class="vendor-kpi"><strong id="kpiForaGrupo">—</strong><span>Vendedores fora do grupo</span></div>
+                    <div class="vendor-kpi"><strong id="kpiConflitoGrupo">0</strong><span>Cadastros com número repetido</span></div>
+                    <div class="vendor-kpi"><strong id="kpiGrupoPendente">—</strong><span>Não verificáveis</span></div>
+                </div>
+
+
+
+                <details class="vendor-tools" id="painelPedidosTelefone" ontoggle="if(this.open)VendedoresPresenter.carregarSolicitacoesTelefone()">
+                  <summary><span><i class="fas fa-phone-alt"></i> SOLICITAÇÕES DE TELEFONE</span><span class="vendor-tools-help">Recebidas pelo portal para revisão</span></summary>
+                  <p class="vendor-subtext">Os números enviados pelo portal não alteram o cadastro oficial. Confira com o vendedor antes de marcá-los como validados.</p>
+                  <div id="pedidosTelefoneStatus" class="vendor-last-update">Abra para consultar os pedidos.</div>
+                  <div id="pedidosTelefoneLista" class="vendor-links-lista"></div>
+                </details>
+                <div class="vendor-section-head">
+                    <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
+                    <button class="vendor-quiet-btn" type="button" onclick="VendedoresPresenter.limparFiltros()"><i class="fas fa-undo-alt"></i> Limpar filtros</button>
+                </div>
+                <div class="vendor-filters">
+                    <input id="buscaVendedor" type="search" aria-label="Buscar vendedor por nome, Rubi ou número de telefone" placeholder="Nome, Rubi ou número de telefone (com ou sem pontuação)..." oninput="VendedoresPresenter.agendarBusca()">
+                    <select id="filtroEmpresaVendedor" aria-label="Filtrar situação do cadastro" onchange="VendedoresPresenter.filtrar()">
+                        <option value="ativos">Somente cadastros ativos</option>
+                        <option value="todos">Todos os cadastros</option>
+                        <option value="inativos">Somente inativos</option>
+                    </select>
+                    <select id="filtroFilialVendedor" aria-label="Filtrar por filial" onchange="VendedoresPresenter.filtrar()">
+                        <option value="">Todas as filiais</option>
+                    </select>
+                    <select id="filtroStatusVendedor" aria-label="Filtrar situação do telefone" onchange="VendedoresPresenter.filtrar()">
+                        <option value="todos">Todos os telefones</option>
+                        <option value="validado">Telefone validado</option>
+                        <option value="pendente">Telefone pendente</option>
+                        <option value="sem-telefone">Sem telefone</option>
+                    </select>
+                    <select id="filtroGrupoVendedor" aria-label="Filtrar participação no grupo" onchange="VendedoresPresenter.filtrar()">
+                        <option value="">Todas as situações do grupo</option>
+                        <option value="grupo">No grupo</option>
+                        <option value="fora">Fora do grupo</option>
+                        <option value="conflito">Número duplicado</option>
+                        <option value="revisar">Possível DDD diferente</option>
+                        <option value="sem_dados">Lista do grupo não carregada</option>
+                    </select>
+                </div>
+                <p class="vendor-subtext">Para conferir pendências, use o filtro Telefone pendente. O status do grupo usa o telefone completo padronizado. Números duplicados, DDDs suspeitos ou não validados exigem revisão; o nome no WhatsApp não altera automaticamente o cadastro.</p>
+                <div class="vendor-cards" id="corpoTabelaVendedores" role="list" aria-live="polite"><p class="vendor-empty">Carregando vendedores…</p></div>
+                <div class="vendor-pagination">
+                    <span id="infoPaginacaoVendedores">Nenhum registro</span>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" id="paginaAnteriorVendedores" onclick="VendedoresPresenter.mudarPagina(-1)" disabled>MOSTRAR MENOS</button>
+                        <button type="button" id="paginaProximaVendedores" onclick="VendedoresPresenter.mudarPagina(1)" disabled>MOSTRAR MAIS 15</button>
+                    </div>
+                </div>
+                <p class="vendor-last-update" id="ultimaAtualizacaoVendedores"></p>
+            </div>
+
+        <details class="vendor-tools" id="gestaoParticipantesGrupo">
+            <summary><i class="fab fa-whatsapp"></i> IMPORTAR LISTA DO WHATSAPP E REVISAR EXCEÇÕES <span class="vendor-tools-help">Abrir ferramentas</span></summary>
+            <p class="vendor-subtext">A lista única de vendedores acima é a visão principal. Aqui você atualiza a origem WhatsApp e identifica participantes externos ou situações ambíguas.</p>
+
+            <div class="admin-card">
+                <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> PARTICIPANTES DO GRUPO</h2>
+                <p class="vendor-subtext">Importe os participantes diretamente pelo arquivo exportado ou texto colado. A prévia mostra os números únicos antes da confirmação. Os telefones oficiais dos vendedores só mudam com sua autorização.</p>
+                <h3>Importar participantes</h3>
+                <p class="vendor-subtext"><strong>Recomendado:</strong> envie o arquivo exportado do WhatsApp, sem modificar. O painel utiliza somente o nome exibido e o número; não grava as demais colunas.</p>
+                <input type="file" id="whatsappArquivo" accept=".xlsx,.xls,.ods,.csv" hidden onchange="WhatsAppPresenter.selecionarArquivo(this)">
+                <div class="vendor-actions">
+                    <button class="btn-outline" type="button" onclick="document.getElementById('whatsappArquivo').click()"><i class="fas fa-file-excel"></i> ESCOLHER ARQUIVO</button>
+                    <button class="btn-outline" id="whatsappAnalisarArquivo" type="button" onclick="WhatsAppPresenter.preverArquivo()"><i class="fas fa-search"></i> ANALISAR ARQUIVO</button>
+                </div>
+                <p id="whatsappArquivoInfo" class="vendor-subtext" style="margin-top:6px">Nenhum arquivo selecionado.</p>
+                <p class="vendor-subtext" style="margin-top:14px">Ou cole a lista manualmente, uma pessoa por linha:</p>
+                <p class="vendor-subtext">Para colar diretamente, use uma pessoa por linha no formato <strong>Nome;Telefone</strong> (ou separado por TAB). Confira a prévia antes de substituir a lista atual.</p>
+                <textarea id="whatsappColar" rows="4" placeholder="LUCAS - (12345) NOME - VENDEDOR;65999999999&#10;FILIAL - GERENTE;65988888888" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:10px;background:transparent;color:inherit"></textarea>
+                <div class="vendor-actions">
+                    <button class="btn-outline" type="button" onclick="WhatsAppPresenter.preverTexto()"><i class="fas fa-search"></i> ANALISAR TEXTO</button>
+                </div>
+                <div id="whatsappPrevia" hidden style="margin:14px 0;padding:14px;border:1px solid #ddd;border-radius:12px">
+                    <p id="whatsappPreviaTexto"></p>
+                    <p id="whatsappPreviaAmostra" class="vendor-subtext"></p>
+                    <p id="whatsappPreviaAvisos" class="vendor-subtext" style="color:#a35505"></p>
+                    <button class="btn-primary" id="whatsappConfirmarImportacao" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
+                </div>
+                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button><button class="btn-outline" type="button" onclick="WhatsAppPresenter.normalizarExistentes()"><i class="fas fa-phone"></i> PADRONIZAR NÚMEROS JÁ IMPORTADOS</button></div>
+                <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
+            </div>
+            <div class="admin-card">
+                <h2>PARTICIPANTES EXTERNOS E SITUAÇÕES PARA REVISÃO</h2>
+                <div class="vendor-kpis">
+                    <div class="vendor-kpi"><strong id="whatsappTotal">0</strong><span>Participantes</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappVendedores">0</strong><span>Vendedores identificados</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappRevisar">0</strong><span>Outras revisões</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappInativos">0</strong><span>Inativos no grupo</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappDesconhecidos">0</strong><span>Não identificados</span></div>
+                </div>
+                <div class="vendor-filters" style="grid-template-columns:2fr 1fr">
+                    <input id="whatsappBusca" type="search" placeholder="Buscar nome, telefone, matrícula..." oninput="WhatsAppPresenter.agendarBusca()">
+                    <select id="whatsappFiltro" onchange="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
+                        <option value="">Todos que precisam ser identificados</option>
+
+                        <option value="identificado">Gerentes / outros</option>
+                        <option value="revisar">Outras revisões</option>
+                        <option value="inativo">Inativos no grupo · avaliar remoção</option>
+                        <option value="desconhecido">Não identificados</option>
+                    </select>
+                </div>
+                <div id="whatsappLinhas" class="vendor-cards" role="list"><p class="vendor-empty">Nenhum participante carregado.</p></div>
+                <div class="vendor-pagination"><span id="whatsappPagina"></span><div>
+                    <button type="button" id="whatsappAnterior" onclick="WhatsAppPresenter.mover(-1)" disabled>MOSTRAR MENOS</button>
+                    <button type="button" id="whatsappProxima" onclick="WhatsAppPresenter.mover(1)" disabled>MOSTRAR MAIS 15</button>
+                </div></div>
+                <p class="vendor-subtext"><strong>Inativos identificados:</strong> a lista sinaliza que precisam de avaliação para eventual remoção do grupo. Ela não remove pessoas automaticamente do WhatsApp.</p>
+                <p class="vendor-last-update">Identificações manuais ficam na aba Identificacoes_Manuais. Caso o número desapareça da próxima importação, a identificação continua guardada para futuras conferências.</p>
+            </div>
+
+        </details>
+        <details class="vendor-tools" id="gestaoImportacaoFuncionarios">
+          <summary><span><i class="fas fa-file-import"></i> IMPORTAR RELATÓRIO DE FUNCIONÁRIOS</span><span class="vendor-tools-help">Abrir ferramenta</span></summary>
+            <div class="admin-card" id="painelImportacaoFuncionarios" style="display:none;">
+                <h2><i class="fas fa-file-import" style="color:#d0252a;"></i> IMPORTAR RELATÓRIO DE FUNCIONÁRIOS</h2>
+                <p class="vendor-subtext">Envie o relatório original da empresa (.XLS, .XLSX ou .ODS). O navegador extrai somente matrícula, nome, filial e situação; CPF, RG, nascimento e outros campos não são enviados nem armazenados.</p>
+                <input type="file" id="arquivoRelatorioFuncionarios" accept=".xls,.xlsx,.xlsm,.ods,.csv" style="display:none" onchange="VendorImportPresenter.aoSelecionarArquivo(this)">
+                <div class="vendor-actions">
+                    <button type="button" class="btn-outline" id="btnEscolherRelatorio" onclick="document.getElementById('arquivoRelatorioFuncionarios').click()"><i class="fas fa-folder-open"></i> ESCOLHER RELATÓRIO</button>
+                    <button type="button" class="btn-primary" id="btnAnalisarRelatorio" onclick="VendorImportPresenter.analisar()" disabled><i class="fas fa-search"></i> ANALISAR RELATÓRIO</button>
+                </div>
+                <div id="arquivoRelatorioSelecionado" class="vendor-status"><i class="fas fa-info-circle"></i><span>Nenhum arquivo selecionado.</span></div>
+                <div id="painelPreviaImportacao" style="display:none;margin-top:16px;"></div>
+            </div>
+
+        </details>
+        </section><!-- /abaVendedores -->
+
+
+
+
+
+
+        <section id="abaContatos" class="aba-conteudo" style="display:none;">
+          <div class="contatos-layout">
+          <div class="admin-card contatos-painel">
+            <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> CONTATOS PERSONALIZADOS EM LOTE</h2>
+            <p class="vendor-subtext">Escolha uma oferta e selecione até 20 vendedores elegíveis. Cada envio continua manual e individual.</p>
+            <div id="contatosAviso" class="vendor-status" role="status">Carregando dados...</div>
+            <div class="contatos-grid">
+              <div class="form-group"><label for="contatosOferta">Oferta ativa</label><select id="contatosOferta" onchange="ContatosPresenter.atualizarOferta()"><option value="">Selecione uma oferta ativa</option></select></div>
+              <div class="form-group"><label for="contatosFilial">Filial</label><select id="contatosFilial" onchange="ContatosPresenter.filtrarLista()"><option value="">Todas as filiais</option></select></div>
+              <div class="form-group"><label for="contatosBuscar">Buscar vendedor</label><input id="contatosBuscar" type="search" placeholder="Nome ou Rubi" oninput="ContatosPresenter.filtrarLista()"></div>
+            </div>
+            <details class="contatos-config" id="contatosConfigPainel">
+              <summary><i class="fas fa-cog"></i> Link e mensagem do grupo <span>Configuração reutilizável</span></summary>
+              <div class="form-group"><label for="contatosLinkGrupo">Link de convite do grupo</label><input id="contatosLinkGrupo" type="url" placeholder="https://chat.whatsapp.com/..." oninput="ContatosPresenter.renderizarFila()"></div>
+              <div class="form-group"><label for="contatosConviteModelo">Mensagem de convite (separada da oferta)</label>
+                <textarea id="contatosConviteModelo" rows="3" maxlength="1000" oninput="ContatosPresenter.renderizarFila()">Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]</textarea>
+                <small>Variáveis: [NOME], [RUBI], [FILIAL] e [LINK_GRUPO].</small>
+              </div>
+              <div class="contatos-config-rodape"><button type="button" id="btnSalvarConfigContatos" class="btn-primary" onclick="ContatosPresenter.salvarConfig()"><i class="fas fa-save"></i> SALVAR CONVITE</button></div>
+            </details>
+            <p class="contatos-config-status" id="contatosConfigStatus" role="status">O convite será carregado da planilha.</p>
+            <div class="contatos-toolbar">
+              <span id="contatosContador">0 selecionados</span>
+              <button type="button" class="btn-outline" onclick="ContatosPresenter.selecionarAte20()">SELECIONAR ATÉ 20</button>
+              <button type="button" class="btn-outline" onclick="ContatosPresenter.limparSelecao()">LIMPAR SELEÇÃO</button>
+            </div>
+            <div id="contatosElegiveis" class="contatos-lista" role="list"></div>
+            <div id="contatosListaRodape" class="contatos-lista-rodape" aria-live="polite"></div>
+          </div>
+          <div class="admin-card contatos-fila-card">
+            <h2>FILA DE PREPARAÇÃO</h2>
+            <p class="vendor-subtext">No celular, use Compartilhar imagem + texto e selecione o WhatsApp. Confira se o texto foi incluído na legenda; alguns aparelhos podem exigir colá-lo. No computador, abra a conversa e anexe o banner manualmente. Apenas após concluir o contato use <strong>Marcar como abordado</strong>; esse registro é uma confirmação manual sua.</p>
+            <div id="contatosFila" class="contatos-lista" role="list"><p class="vendor-empty">Selecione vendedores para preparar as mensagens.</p></div>
+          </div>
+          </div><!-- /contatos-layout -->
+        </section><!-- /abaContatos -->
+
+        <section id="abaConfiguracoes" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-sliders-h" style="color:#d0252a"></i> CENTRAL DE CONFIGURAÇÕES</h2>
+                <p class="vendor-subtext">Acesse as configurações existentes sem alterar a planilha nem o Firebase diretamente. Cada área mantém seu próprio botão de salvar.</p>
+                <div class="central-grid">
+                    <article class="central-item">
+                        <h3><i class="fas fa-palette"></i> Aparência do portal</h3>
+                        <p>Editar logo, imagem, título e mensagem da tela Em breve. Alterações publicadas no Firebase para todos.</p>
+                        <button type="button" class="btn-outline" onclick="AdminPresenter.abrirConfiguracao('aparencia')">EDITAR APARÊNCIA</button>
+                    </article>
+                    <article class="central-item">
+                        <h3><i class="fab fa-whatsapp"></i> Link e convite do grupo</h3>
+                        <p>Editar o link e o modelo de convite. Configuração salva no Google Sheets e reutilizada por todos os administradores.</p>
+                        <button type="button" class="btn-outline" onclick="AdminPresenter.abrirConfiguracao('contatos')">EDITAR CONVITE</button>
+                    </article>
+                    <article class="central-item">
+                        <h3><i class="fas fa-user-shield"></i> Acessos</h3>
+                        <p>Consultar e gerenciar administradores autorizados. Disponível somente para a conta principal.</p>
+                        <button type="button" id="centralAcessos" class="btn-outline" onclick="AdminPresenter.abrirConfiguracao('acessos')">GERENCIAR ACESSOS</button>
+                    </article>
+                </div>
+                <div class="central-preferencias">
+                    <h3 style="font-size:15px;margin:0 0 8px">Preferências deste navegador</h3>
+                    <label for="centralQtdVendedores">Registros exibidos inicialmente na lista de Vendedores</label>
+                    <select id="centralQtdVendedores" onchange="AdminPresenter.salvarPreferenciaLista(this.value)">
+                        <option value="15">15 vendedores</option><option value="25">25 vendedores</option><option value="50">50 vendedores</option>
+                    </select>
+                    <p class="vendor-subtext">Essa preferência é local. Os dados e os cadastros continuam compartilhados no Google Sheets.</p>
+                </div>
+            </div>
+                <div class="central-preferencias" id="segurancaSecao">
+                    <h3 style="font-size:17px;margin:0 0 10px"><i class="fas fa-shield-alt"></i> Segurança, backups e auditoria</h3>
+                    <p class="vendor-subtext">Backups manuais e histórico de operações. Exclusivo da conta principal. Os dados não são enviados ao GitHub nem armazenados no Cloudflare.</p>
+                    <p id="segurancaAviso" class="vendor-subtext">Somente a conta principal pode consultar o histórico e gerar backups.</p>
+                    <div id="segurancaFerramentas" hidden>
+                        <div class="vendor-actions" style="gap:10px;flex-wrap:wrap; margin:12px 0">
+                            <button type="button" id="btnBackupPlanilha" class="btn-outline" onclick="SegurancaPresenter.criarBackupPlanilha()"><i class="fas fa-cloud-upload-alt"></i> BACKUP DA PLANILHA NO DRIVE</button>
+                            <button type="button" id="btnBackupFirebase" class="btn-outline" onclick="SegurancaPresenter.exportarFirebase()"><i class="fas fa-file-download"></i> EXPORTAR OFERTAS E APARÊNCIA (JSON)</button>
+                        </div>
+                        <a id="segurancaBackupLink" href="#" hidden target="_blank" rel="noopener noreferrer" style="font-size:12px;margin-bottom:10px"></a>
+                        <p id="segurancaStatus" class="vendor-status" role="status">Nenhum backup criado nesta sessão.</p>
+                        <div class="vendor-actions" style="margin:18px 0 10px;gap:9px;align-items:center">
+                            <h3 style="margin:0;font-size:15px;flex:1">Histórico de alterações administrativas</h3>
+                            <button type="button" class="btn-outline" id="btnAtualizarAuditoria" onclick="SegurancaPresenter.carregarAuditoria()">ATUALIZAR HISTÓRICO</button>
+                        </div>
+                        <div class="vendor-table-wrap" style="max-height:390px;overflow:auto">
+                            <table class="vendor-table" style="min-width:780px">
+                                <thead><tr><th>DATA (UTC)</th><th>ADMINISTRADOR</th><th>OPERAÇÃO</th><th>REFERÊNCIA</th><th>RESUMO</th><th>ORIGEM</th></tr></thead>
+                                <tbody id="segurancaAuditoriaLinhas"><tr><td colspan="5">Clique em Atualizar histórico.</td></tr></tbody>
+                            </table>
+                        </div>
+                        <p id="segurancaAuditoriaTotal" class="vendor-subtext"></p>
+                        <p class="vendor-last-update">Operações nas planilhas são registradas pela API. Mudanças de ofertas e aparência são relatos do navegador, não uma trilha inviolável do Firebase. Os arquivos JSON baixados exigem armazenamento privado.</p>
+                    </div>
+                </div>
+        </section>
+
+        <section id="abaAcessos" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-user-shield" style="color:#d0252a;"></i> GERENCIAR ADMINISTRADORES</h2>
+                <p class="vendor-subtext">A conta principal controla os acessos. Administradores adicionais não precisam receber permissão direta na planilha. Após o primeiro login deles, a conta principal poderá liberar a edição das ofertas pelo Firebase.</p>
+                <div id="statusAcessos" class="vendor-status" role="status">Carregando acessos...</div>
+                <div class="vendor-table-wrap" style="margin-top:15px;">
+                    <table class="vendor-table" style="min-width:440px;">
+                        <thead><tr><th>E-MAIL</th><th>PERMISSÃO</th><th>AÇÃO</th></tr></thead>
+                        <tbody id="listaAdministradores"><tr><td colspan="3">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+                <form id="formAdicionarAdmin" onsubmit="event.preventDefault();GerenciarAcessosPresenter.adicionar()" style="margin-top:20px;">
+                    <div class="form-group"><label for="novoEmailAdmin">Adicionar administrador</label>
+                        <input type="email" id="novoEmailAdmin" required maxlength="254" placeholder="email@exemplo.com" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btnAdicionarAdmin" style="width:auto;margin:0"><i class="fas fa-user-plus"></i> AUTORIZAR E-MAIL</button>
+                </form>
+                <p class="vendor-last-update">Esta permissão é salva no Apps Script e não expõe uma lista de administradores no GitHub. A conta principal não pode ser removida pelo painel.</p>
+            </div>
+        </section><!-- /abaAcessos -->
 
     </div><!-- /painelAdmin -->
 </div>
+
+<div class="vendor-modal" id="modalEditarVendedor" role="dialog" aria-modal="true" aria-labelledby="tituloModalEditarVendedor" onclick="if(event.target===this)VendedoresPresenter.fecharEdicao()">
+    <div class="vendor-modal-card">
+        <h2 id="tituloModalEditarVendedor"><i class="fas fa-user-edit"></i> EDITAR CADASTRO</h2>
+        <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
+        <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
+        <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><input type="text" id="editarFilialVendedor" maxlength="6" inputmode="numeric" pattern="[0-9]*" list="listaNumerosFiliais" oninput="VendedoresPresenter.atualizarLocalidadeFilial()"><datalist id="listaNumerosFiliais"></datalist><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
+        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" placeholder="(DDD) 9 1234-5678" oninput="VendedoresPresenter.aoAlterarTelefone()" onblur="VendedoresPresenter.formatarTelefoneDigitado()"></div>
+        <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
+        <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
+        <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Cadastro ativo no painel</label>
+        <div class="form-group" style="margin-top:12px;"><label for="editarObservacoesVendedor">Observações</label><textarea id="editarObservacoesVendedor" rows="2" maxlength="500"></textarea></div>
+        <p class="vendor-subtext">As alterações serão gravadas diretamente na aba Vendedores. A matrícula não pode ser alterada em um cadastro existente. Ao trocar o telefone, a validação volta automaticamente para PENDENTE.</p>
+        <div class="vendor-modal-actions">
+            <button type="button" class="btn-primary" id="btnSalvarVendedor" onclick="VendedoresPresenter.salvarEdicao()">SALVAR ALTERAÇÕES</button>
+            <button type="button" class="btn-outline" onclick="VendedoresPresenter.fecharEdicao()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="vendor-modal" id="whatsappModal" role="dialog" aria-modal="true" aria-labelledby="whatsappTitulo" onclick="if(event.target===this)WhatsAppPresenter.fechar()">
+    <div class="vendor-modal-card">
+        <h2 id="whatsappTitulo">Identificar participante</h2>
+        <p id="whatsappEditando" class="vendor-subtext"></p>
+        <div class="form-group"><label for="whatsappTipoPessoa">Tipo de participante</label>
+            <select id="whatsappTipoPessoa" onchange="WhatsAppPresenter.mostrarMatricula()" style="padding:12px;width:100%;border-radius:10px">
+                <option value="GERENTE">Gerente</option><option value="FUNCIONARIO">Funcionário (não vendedor)</option>
+                <option value="OUTRO">Outro</option><option value="VENDEDOR">Vendedor (associar Rubi)</option>
+            </select>
+        </div>
+        <div class="form-group" id="whatsappMatriculaBloco" hidden><label for="whatsappMatricula">Matrícula / Rubi</label>
+            <input type="text" id="whatsappMatricula" inputmode="numeric" maxlength="8" placeholder="Matrícula oficial" oninput="WhatsAppPresenter.mostrarComparacao()"></div>
+        <div class="form-group"><label for="whatsappObservacao">Observação opcional</label>
+            <input type="text" id="whatsappObservacao" maxlength="220" placeholder="Informação de apoio"></div>
+        <div id="whatsappComparacao" class="vendor-help" role="status" style="margin:10px 0">Informe o Rubi para comparar os telefones.</div><p class="vendor-subtext">Você pode apenas identificar o participante ou, depois de conferir, atualizar o telefone do vendedor. A alteração oficial exige confirmação e gera auditoria.</p>
+        <div class="vendor-modal-actions">
+            <button class="btn-primary" id="whatsappSalvar" type="button" onclick="WhatsAppPresenter.salvar()">APENAS ASSOCIAR</button>
+            <button class="btn-primary" id="whatsappAtualizarTelefone" type="button" onclick="WhatsAppPresenter.salvar(false,true)" hidden>ASSOCIAR E ATUALIZAR TELEFONE</button>
+            <button class="btn-outline" type="button" onclick="WhatsAppPresenter.salvar(true)">REMOVER IDENTIFICAÇÃO</button>
+            <button class="btn-outline" type="button" onclick="WhatsAppPresenter.fechar()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
-    <script src="shared/config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
+    <script src="shared/config.js?v=1.6.17"></script>
     <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js"></script>
+    <script src="model/firebase-config.js?v=1.6.17"></script>
+    <script src="model/appearance.js?v=1.6.17"></script>
+    <script src="model/campanhas.js?v=1.6.17"></script>
+    <script src="model/link-track.js?v=1.6.17"></script>
+    <script src="model/analytics.js?v=1.6.17"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js"></script>
-    <script src="model/validators.js"></script>
-    <script src="model/auth.js"></script>
-    <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js"></script>
+    <script src="model/storage.js?v=1.6.17"></script>
+    <script src="model/validators.js?v=1.6.17"></script>
+    <script src="model/auth.js?v=1.6.17"></script>
+    <script src="view/ui.js?v=1.6.17"></script>
+    <script src="presenter/campanhas-presenter.js?v=1.6.17"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.17"></script>
+    <script src="presenter/seguranca-presenter.js?v=1.6.17"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.17"></script>
+    <script src="model/google-sheets.js?v=1.6.17"></script>
+    <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
+    <script src="model/planilha-loader.js?v=1.6.17"></script>
+    <script src="model/vendor-import.js?v=1.6.17"></script>
+    <script src="model/vendor-management.js?v=1.6.17"></script>
+    <script src="model/link-checker.js?v=1.6.17"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.17"></script>
+    <script src="model/whatsapp.js?v=1.6.17"></script>
+    <script src="presenter/pendencias-presenter.js?v=1.6.17"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.17"></script>
+    <script src="presenter/acessos-presenter.js?v=1.6.17"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.17"></script>
 </body>
 </html>

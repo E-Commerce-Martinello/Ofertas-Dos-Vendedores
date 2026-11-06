@@ -5,6 +5,9 @@
 const API = {
 
     async rastrear(codigo, navegador) {
+        // O coletor atual registra eventos de compartilhamento. O formulário legado
+        // permanece desativado, inclusive no site oficial, salvo ativação explícita.
+        if (CONFIG.rastreioFormularioLegado !== true) return { metodo: 'formulario-legado-desativado' };
         try {
             const fd = new FormData();
             fd.append(CONFIG.entryIdCodigo,  codigo);

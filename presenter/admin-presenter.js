@@ -8,101 +8,289 @@ const AdminPresenter = {
     ofertas: [],
     intervaloStatus: null,
     timerBloqueio: null,
+    abaAtual: 'ofertas',
+    pararSyncOfertas: null,
+    editandoBase: null,
+    editandoId: null,
+    _versaoOfertas: null,
+    _chaveAba: `martAdminUltimaAba_${CONFIG.environment}`,
+    _autorizado: false,
 
     async init() {
-        Storage.verificarQuota(); // Limpar localStorage se cheio (Safari/iPhone)
-        console.log('🔐 Admin iniciando...');
+        document.querySelectorAll('[data-mart-env-badge]').forEach(el => {
+            el.textContent = MART_PORTAL_PRINCIPAL ? '✓ PORTAL PRINCIPAL' : '⚙ AMBIENTE DE HOMOLOGAÇÃO';
+        });
+        document.title = `Admin Martinello | 1.6.17 ${MART_PORTAL_PRINCIPAL ? 'OFICIAL' : 'HOMOLOGAÇÃO'}`;
+        Storage.verificarQuota();
         UI.tema.aplicar(Storage.carregarTema());
-
-        if (Auth.sessaoValida()) {
-            console.log('✅ Sessão válida — abrindo painel');
-            await this._abrirPainel();
-        } else {
-            console.log('🔒 Sem sessão — exibindo login');
+        const url = GoogleSheetsService.obterUrl();
+        // Eliminar credenciais e sessões antigas da versão com senha fixa.
+        localStorage.removeItem('martVendedoresApiToken_LEGADO');
+        sessionStorage.removeItem(CONFIG.SESSION_KEY);
+        this._restaurandoSessao(true);
+        try {
+            const usuario = await Auth.iniciar();
+            if (usuario?.isAnonymous) {
+                // Visitante do portal, não é um administrador: mantém tela de login limpa.
+                await Auth.sair();
+            } else if (usuario && url) {
+                const acesso = await GoogleSheetsService.testarConexao(url);
+                await this._abrirPainel(acesso);
+            }
+        } catch (erro) {
+            // Sem autorização do Apps Script, não mostrar dados internos nem usar cache.
             this._mostrarLogin();
+            this._mensagemLogin(erro.message || 'Não foi possível validar a conta.');
+            if (!Auth.usuarioAtual()) await Auth.sair().catch(() => {});
+        } finally {
+            this._restaurandoSessao(false);
         }
-
-        document.getElementById('senhaInput')
-            ?.addEventListener('keydown', e => { if (e.key === 'Enter') this.login(); });
     },
 
-    // ── LOGIN ────────────────────────────────
+    _restaurandoSessao(ativo) {
+        const box=document.getElementById('loginBox');
+        const aviso=document.getElementById('loginRestaurando');
+        if (box) {if (ativo) box.style.display='block'; box.dataset.restaurando=ativo?'true':'false';}
+        if (aviso) aviso.hidden=!ativo;
+        const titulo=document.getElementById('tituloLogin');
+        if (titulo) titulo.textContent=ativo?'Preparando painel...':'Acesso Restrito';
+        const instrucao=document.getElementById('instrucaoLogin');
+        if (instrucao) instrucao.hidden=ativo;
+    },
+
+    _lembrarAba(aba) {
+        try { sessionStorage.setItem(this._chaveAba, aba); } catch (_) {}
+    },
+    _abaSalva() {
+        try {return sessionStorage.getItem(this._chaveAba)||'ofertas';} catch (_) {return 'ofertas';}
+    },
+
+    _mensagemLogin(mensagem) {
+        const el = document.getElementById('loginStatus');
+        if (el) { el.textContent = mensagem || ''; el.style.display = mensagem ? 'block' : 'none'; }
+    },
 
     _mostrarLogin() {
-        document.getElementById('loginBox').style.display    = 'block';
+        this._autorizado = false;
+        document.getElementById('loginBox').style.display = 'block';
         document.getElementById('painelAdmin').style.display = 'none';
-        if (Auth.estaBloqueado()) this._iniciarTimerBloqueio();
     },
 
     async login() {
-        if (Auth.estaBloqueado()) {
-            UI.erro(`Bloqueado. Aguarde ${Auth.tempoRestanteBloqueio()}s.`);
-            return;
-        }
-
-        const senha = document.getElementById('senhaInput').value;
-        console.log('🔑 Tentativa de login...');
-        const res = await Auth.verificarSenha(senha);
-
-        if (res.ok) {
-            console.log('✅ Login bem-sucedido');
-            await this._abrirPainel();
-        } else if (res.bloqueado) {
-            console.warn('🚫 Conta bloqueada por excesso de tentativas');
-            this._iniciarTimerBloqueio();
-        } else {
-            console.warn(`❌ Senha incorreta — ${res.restantes} tentativa(s) restante(s)`);
-            const msg = res.restantes > 0
-                ? `Senha incorreta. ${res.restantes} tentativa(s) restante(s).`
-                : `Bloqueado por ${Math.ceil(CONFIG.BLOQUEIO_MS / 60000)} minutos.`;
-            UI.erro(msg);
-            document.getElementById('senhaInput').value = '';
+        const btn = document.getElementById('btnEntrar');
+        const url = GoogleSheetsService.obterUrl();
+        if (!url) { this._mensagemLogin('A conexão não foi configurada. Confira shared/config.js.'); return; }
+        if (btn) { btn.disabled = true; btn.textContent = 'VERIFICANDO...'; }
+        this._mensagemLogin('');
+        try {
+            const usuario = Auth.usuarioAtual() || await Auth.entrarGoogle();
+            if (!usuario) { this._mensagemLogin('Aguardando retorno da autenticação Google…'); return; }
+            this._mensagemLogin('Conta Google autenticada. Verificando autorização da API…');
+            // Exige permissão no servidor antes de mostrar dados internos no painel.
+            const acesso = await GoogleSheetsService.testarConexao(url);
+            localStorage.setItem(`martVendedoresApiUrl_${CONFIG.environment}`, url);
+            await this._abrirPainel(acesso);
+        } catch (erro) {
+            // Não desfazer um login Google válido por timeout do Apps Script.
+            // O painel permanece oculto até autorização real do servidor.
+            const msg = erro.message || 'Acesso não autorizado.';
+            this._mensagemLogin(Auth.usuarioAtual() ? 'Login Google concluído, mas a API não liberou o acesso: ' + msg : msg);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fab fa-google"></i> ENTRAR COM GOOGLE'; }
         }
     },
 
-    _iniciarTimerBloqueio() {
-        clearInterval(this.timerBloqueio);
-        const btn  = document.getElementById('btnEntrar');
-        const info = document.getElementById('infoBloqueio');
-
-        const atualizar = () => {
-            const s = Auth.tempoRestanteBloqueio();
-            if (s <= 0) {
-                clearInterval(this.timerBloqueio);
-                if (btn)  { btn.disabled = false; btn.textContent = 'ENTRAR'; }
-                if (info) info.style.display = 'none';
-                return;
-            }
-            const m = Math.floor(s / 60), ss = s % 60;
-            if (btn)  { btn.disabled = true; btn.textContent = `BLOQUEADO (${m}:${String(ss).padStart(2,'0')})`; }
-            if (info) { info.style.display = 'block'; info.textContent = `Muitas tentativas incorretas. Aguarde ${m}:${String(ss).padStart(2,'0')}.`; }
-        };
-
-        atualizar();
-        this.timerBloqueio = setInterval(atualizar, 1000);
-    },
-
-    logout() {
-        console.log('👋 Logout realizado');
-        Auth.logout();
+    async logout() {
+        this._pararSincronizacao();
         clearInterval(this.intervaloStatus);
+        this.intervaloStatus = null;
+        this._autorizado = false;
+        try { sessionStorage.removeItem(this._chaveAba); } catch (_) {}
+        if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
+        if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
+        if (typeof DashboardPresenter !== 'undefined') DashboardPresenter.limpar();
+        if (typeof ContatosPresenter !== 'undefined') ContatosPresenter.limpar();
+        if (typeof WhatsAppPresenter !== 'undefined') { WhatsAppPresenter.participantes=[]; WhatsAppPresenter.identificacoes=[]; WhatsAppPresenter.previa=null; WhatsAppPresenter.grupoCarregado=false; }
+        await Auth.sair();
+        document.getElementById('tabAcessos').style.display = 'none';
+        this.mostrarAba('ofertas');
+        this.ofertas = [];
+        this._mensagemLogin('');
         this._mostrarLogin();
     },
 
     // ── PAINEL ───────────────────────────────
 
-    async _abrirPainel() {
+    async _abrirPainel(acesso = {}) {
+        this._pararSincronizacao();
+        if (this.intervaloStatus) clearInterval(this.intervaloStatus);
         document.getElementById('loginBox').style.display    = 'none';
         document.getElementById('painelAdmin').style.display = 'block';
 
-        this.ofertas = await Storage.carregarOfertas();
-        console.log(`📋 ${this.ofertas.length} oferta(s) carregada(s)`);
-        this.renderLista();
+        const gestor = acesso.proprietario === true;
+        this.ehPrincipal = gestor;
+        this._autorizado = true;
+        if(typeof SegurancaPresenter !== 'undefined') SegurancaPresenter.exibir();
+        document.getElementById('tabAcessos').style.display = gestor ? '' : 'none';
+        const avisoAdmin = document.getElementById('avisoPermissaoOfertas');
+        if (avisoAdmin) {
+            avisoAdmin.hidden = true;
+            if (!gestor) {
+                const uid = Auth.usuarioAtual()?.uid;
+                if (!uid) avisoAdmin.hidden = false;
+                else database.ref('adminUids' + sufixoAmbiente + '/' + uid).once('value').then(snap => {
+                    // A verificação visual não deve atrasar a abertura do painel;
+                    // as regras Firebase seguem impondo as permissões reais.
+                    if (this._autorizado && Auth.usuarioAtual()?.uid === uid) avisoAdmin.hidden = !!snap.val();
+                }).catch(() => {
+                    if (this._autorizado && Auth.usuarioAtual()?.uid === uid) avisoAdmin.hidden = false;
+                });
+            }
+        }
+        const restaurada = this._abaSalva();
+        this.mostrarAba(['ofertas','dashboard','vendedores','contatos','aparencia','configuracoes','acessos','links'].includes(restaurada) ? restaurada : 'ofertas');
+        if (typeof VendedoresPresenter !== 'undefined') {
+            VendedoresPresenter.init();
+            // Uma consulta automaticamente, sem expor a URL ou exigir conexão manual.
+            VendedoresPresenter.atualizar().catch(erro => console.warn('Falha na atualização automática:', erro));
+        }
+        // A assinatura em tempo real inclui o primeiro snapshot. Evita duas leituras
+        // pesadas dos mesmos banners e mantém a proteção de conflitos da v1.6.11.
+        this.ofertas = [];
+        this._sincronizarOfertas();
         this._carregarConfigEmBreve();
         this._setupDragDrop();
+        if (typeof CampanhasPresenter !== 'undefined') CampanhasPresenter.carregar();
 
-        this.intervaloStatus = setInterval(() => this.renderLista(), 5000);
+        // Datas agendadas continuam mudando mesmo sem nova gravação no Firebase.
+        // Intervalo mais leve para a página administrativa.
+        this.intervaloStatus = setInterval(() => {
+            if (this._autorizado && this.abaAtual === 'ofertas') this.renderLista();
+        }, 30000);
         console.log('✅ Painel admin pronto!');
+    },
+
+    _pararSincronizacao() {
+        if (this.pararSyncOfertas) { this.pararSyncOfertas(); this.pararSyncOfertas=null; }
+        this._versaoOfertas=null;
+        this.editandoBase=null;
+        this.editandoId=null;
+    },
+
+    _statusSync(texto, erro=false) {
+        const el=document.getElementById('estadoSyncOfertas');
+        if (!el) return;
+        el.textContent=texto;
+        el.style.color=erro?'#bf2835':'';
+    },
+
+    _sincronizarOfertas() {
+        const assinatura = lista => JSON.stringify(lista.map(o => [o.id, Storage.assinaturaOferta(o)]));
+        this._versaoOfertas=assinatura(this.ofertas);
+        this._statusSync('● Sincronização em tempo real ativada');
+        this.pararSyncOfertas=Storage.escutarOfertas(ofertas => {
+            const agora=assinatura(ofertas);
+            const mudou=agora!==this._versaoOfertas;
+            this._versaoOfertas=agora;
+            this.ofertas=ofertas;
+            if (mudou) {
+                this.renderLista();
+                if (typeof ContatosPresenter!=='undefined' && this.abaAtual==='contatos') {
+                    ContatosPresenter._atualizarOfertas();
+                    ContatosPresenter.renderizarFila();
+                }
+                if (this.editandoId != null && this.editandoBase != null) {
+                    const alvo=ofertas.find(o=>String(o.id)===String(this.editandoId));
+                    if (!alvo || Storage.assinaturaOferta(alvo)!==this.editandoBase) {
+                        this._avisoConflito('⚠️ Esta oferta foi alterada ou excluída por outra conta. Suas alterações no formulário foram mantidas, mas não serão gravadas sobre a versão nova. Copie o texto e reabra a oferta para editar.');
+                    }
+                }
+            }
+            this._statusSync('● Ofertas sincronizadas em tempo real');
+        }, erro => {
+            console.warn('Falha ao receber atualizações das ofertas:',erro);
+            this._statusSync('⚠️ Sem sincronização ao vivo. Não edite até reconectar.',true);
+        });
+    },
+
+    _avisoConflito(texto='') {
+        const el=document.getElementById('avisoConflitoOferta');
+        if (el) { el.textContent=texto; el.style.display=texto?'block':'none'; }
+    },
+
+    mostrarAba(aba) {
+        const acessos = aba === 'acessos' && document.getElementById('tabAcessos').style.display !== 'none';
+        if (aba === 'whatsapp' || aba === 'pendencias') aba = 'vendedores';
+        const vendedores = aba === 'vendedores';
+        const links = aba === 'links';
+        const dashboard = aba === 'dashboard';
+        const contatos = aba === 'contatos';
+        const aparencia = aba === 'aparencia';
+        const configuracoes = aba === 'configuracoes';
+        const pendencias = false; // Pendências agora são um filtro da lista única.
+        const whatsapp = false; // A gestão do grupo está integrada à aba Vendedores.
+        this.abaAtual = acessos ? 'acessos' : configuracoes ? 'configuracoes' : aparencia ? 'aparencia' : contatos ? 'contatos' : links ? 'links' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : 'ofertas';
+        if (this._autorizado) this._lembrarAba(this.abaAtual);
+        ['ofertas','vendedores','dashboard','links','contatos','aparencia','configuracoes','pendencias','whatsapp','acessos'].forEach(nome => {
+            const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
+            if (el) el.style.display = this.abaAtual === nome ? 'block' : 'none';
+            const tab = document.getElementById('tab'+nome[0].toUpperCase()+nome.slice(1));
+            if (tab) tab.classList.toggle('active',this.abaAtual === nome);
+        });
+        document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
+        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',links:'🔗 LINKS MARTINELLO',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',aparencia:'🎨 APARÊNCIA',configuracoes:'⚙️ CONFIGURAÇÕES',
+                       pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
+        const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
+                          dashboard:'Acompanhamento de acessos e compartilhamentos iniciados',
+                          links:'Situação dos links de vendedores por filial',
+                          vendedores:'Cadastros, participação no grupo e importações em uma lista única',
+                          contatos:'Seleção de vendedores e preparação manual de mensagens',
+                          aparencia:'Logo, imagem e textos do portal — sincronizados entre dispositivos',
+                          configuracoes:'Central de preferências e atalhos para configurações compartilhadas',
+                          pendencias:'Telefones ainda não validados',
+                          whatsapp:'Participantes do grupo e identificações',
+                          acessos:'Gestão de administradores autorizados'};
+        document.getElementById('tituloAdmin').textContent = titulos[this.abaAtual];
+        document.getElementById('subtituloAdmin').textContent = descricoes[this.abaAtual];
+        if (this.abaAtual === 'ofertas' && this._autorizado) this.renderLista();
+        if (vendedores || links) VendedoresPresenter.init();
+        if (links) VendedoresPresenter.renderizarPainelLinks();
+        if (dashboard) DashboardPresenter.atualizar();
+        if (contatos) ContatosPresenter.init();
+        if (acessos) GerenciarAcessosPresenter.carregar();
+        if (configuracoes) this._renderPreferencias();
+        if(configuracoes && typeof SegurancaPresenter !== 'undefined') SegurancaPresenter.exibir();
+        document.querySelector('.admin-container')?.classList.toggle('admin-container-contacts', contatos);
+        if (pendencias) PendenciasPresenter.renderizar();
+        if (vendedores && typeof WhatsAppPresenter !== 'undefined' && !WhatsAppPresenter.grupoCarregado && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
+    },
+
+    abrirConfiguracao(area) {
+        if (area === 'acessos' && !this.ehPrincipal) { UI.erro('Somente a conta principal gerencia acessos.'); return; }
+        this.mostrarAba(area);
+        if (area === 'contatos') {
+            const painel = document.getElementById('contatosConfigPainel');
+            if (painel) {painel.open = true; painel.scrollIntoView({block:'start',behavior:'smooth'});}
+        }
+    },
+
+    _renderPreferencias() {
+        const campo = document.getElementById('centralQtdVendedores');
+        if (campo) campo.value = String(VendedoresPresenter.porPagina);
+        const btn = document.getElementById('centralAcessos');
+        if (btn) btn.disabled = !this.ehPrincipal;
+    },
+    salvarPreferenciaLista(valor) {
+        const itens = Number(valor);
+        if (![15,25,50].includes(itens)) return;
+        VendedoresPresenter.porPagina = itens;
+        VendedoresPresenter.pagina = 1;
+        try { localStorage.setItem(`martItensVendedores_${CONFIG.environment}`, String(itens)); } catch (_) {}
+        if (VendedoresPresenter.registros.length) VendedoresPresenter.filtrar();
+    },
+
+    _esc(valor) {
+        return String(valor ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     },
 
     // ── LISTA DE OFERTAS ─────────────────────
@@ -116,7 +304,15 @@ const AdminPresenter = {
         const temAtiva = this.ofertas.some(o => isOfertaAtiva(o, agora));
         if (banner) banner.style.display = temAtiva ? 'none' : 'block';
 
-        if (!temAtiva) console.warn('⚠️ Nenhuma oferta ativa no momento!');
+        const ativas = this.ofertas.filter(o => isOfertaAtiva(o, agora)).length;
+        const agendadas = this.ofertas.filter(o => new Date(o.dataInicio) > agora).length;
+        const resumo = document.getElementById('resumoCampanhas');
+        if (resumo) {
+            document.getElementById('totalOfertas').textContent = this.ofertas.length;
+            document.getElementById('ofertasAtivas').textContent = ativas;
+            document.getElementById('ofertasAgendadas').textContent = agendadas;
+            document.getElementById('ofertasEncerradas').textContent = Math.max(0, this.ofertas.length - ativas - agendadas);
+        }
 
         if (this.ofertas.length === 0) {
             con.innerHTML = `<div class="empty-state">
@@ -127,8 +323,8 @@ const AdminPresenter = {
             return;
         }
 
-        const sorted = [...this.ofertas].sort((a,b) => a.dataInicio.localeCompare(b.dataInicio));
-        con.innerHTML = sorted.map((o, i) => {
+        const sorted = this.ofertas.map((o,i) => ({o,i})).sort((a,b) => a.o.dataInicio.localeCompare(b.o.dataInicio));
+        con.innerHTML = sorted.map(({o,i}) => {
             const ini   = new Date(o.dataInicio), fim = new Date(o.dataFim);
             const ativa = isOfertaAtiva(o, agora);
             const futura= agora < ini;
@@ -139,11 +335,12 @@ const AdminPresenter = {
             return `<div class="oferta-card ${ativa ? 'ativa' : ''}">
                 <div class="status-badge ${badge}">${label}${cd ? ` · ${cd}` : ''}</div>
                 <div class="oferta-content">
-                    <img src="${o.urlImagem || 'img/produto.png'}" class="oferta-img" onerror="this.src='img/produto.png'">
+                    <img src="${this._esc(o.urlImagem || 'img/produto.png')}" class="oferta-img" onerror="this.src='img/produto.png'">
                     <div class="oferta-info">
-                        <strong>${o.tituloPagina || 'Sem título'}</strong><br>
+                        <strong>${this._esc(o.tituloPagina || 'Sem título')}</strong><br>
                         📅 ${formatarBrasilia(ini)} → ${formatarBrasilia(fim)}<br>
-                        🔗 ${(o.linkProduto||'').slice(0,45)}…
+                        🔗 ${this._esc((o.linkProduto||'').slice(0,45))}…<br>
+                        🏷️ Campanha: ${this._esc(o.campanha || 'Geral')}
                     </div>
                     <div class="oferta-actions">
                         <button class="btn-warning" onclick="AdminPresenter.editarOferta(${i})" style="padding:10px 15px;width:auto;">✏️</button>
@@ -157,6 +354,9 @@ const AdminPresenter = {
     // ── FORMULÁRIO ───────────────────────────
 
     mostrarNovaOferta() {
+        this.editandoId=null;
+        this.editandoBase=null;
+        this._avisoConflito();
         document.getElementById('formTitulo').innerHTML     = '➕ NOVA OFERTA';
         document.getElementById('editandoIdx').value        = '';
         document.getElementById('dataInicio').value         = '';
@@ -164,6 +364,7 @@ const AdminPresenter = {
         document.getElementById('linkProduto').value        = '';
         document.getElementById('textoOferta').value        = '';
         document.getElementById('tituloPagina').value       = 'DISPARO EM ANDAMENTO!';
+        document.getElementById('campanhaOferta').value     = '';
         this._removerImagem();
         this._atualizarPreview();
         document.getElementById('formNovaOferta').style.display = 'block';
@@ -173,6 +374,9 @@ const AdminPresenter = {
     editarOferta(idx) {
         const o = this.ofertas[idx];
         if (!o) { UI.erro('Oferta não encontrada'); return; }
+        this.editandoId=o.id;
+        this.editandoBase=Storage.assinaturaOferta(o);
+        this._avisoConflito();
         console.log(`✏️ Editando oferta [${idx}]:`, o.tituloPagina);
 
         document.getElementById('formTitulo').innerHTML     = '✏️ EDITAR OFERTA';
@@ -182,6 +386,7 @@ const AdminPresenter = {
         document.getElementById('linkProduto').value        = o.linkProduto || '';
         document.getElementById('textoOferta').value        = o.textoOferta || '';
         document.getElementById('tituloPagina').value       = o.tituloPagina || 'DISPARO EM ANDAMENTO!';
+        document.getElementById('campanhaOferta').value     = o.campanha || '';
 
         const prev = document.getElementById('preview');
         const btnR = document.getElementById('btnRemoverImagem');
@@ -196,6 +401,9 @@ const AdminPresenter = {
     },
 
     cancelarEdicao() {
+        this.editandoId=null;
+        this.editandoBase=null;
+        this._avisoConflito();
         document.getElementById('formNovaOferta').style.display = 'none';
         document.getElementById('editandoIdx').value = '';
         this._removerImagem();
@@ -203,56 +411,82 @@ const AdminPresenter = {
     },
 
     async salvarOferta() {
-        const idx   = document.getElementById('editandoIdx').value;
-        const dados = {
-            dataInicio:   document.getElementById('dataInicio').value,
-            dataFim:      document.getElementById('dataFim').value,
-            linkProduto:  document.getElementById('linkProduto').value,
-            textoOferta:  document.getElementById('textoOferta').value,
-            tituloPagina: document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
-        };
-
-        console.log(`💾 Salvando oferta${idx !== '' ? ` [edição idx ${idx}]` : ' [nova]'}...`);
-
-        const val = Validators.oferta(dados, this.ofertas, idx !== '' ? parseInt(idx) : null);
-        if (!val.valido) {
-            console.warn('❌ Validação falhou:', val.erros);
-            UI.erro(val.erros[0]);
+        const emEdicao = this.editandoId != null;
+        const idAlvo = this.editandoId;
+        const original = emEdicao ? this.ofertas.find(o => String(o.id)===String(idAlvo)) : null;
+        if (emEdicao && !original) {
+            this._avisoConflito('⚠️ Esta oferta foi excluída em outra sessão. Copie os dados e cancele a edição.');
+            UI.erro('Oferta excluída por outro administrador. Nada foi alterado.');
             return;
         }
-
-        const fi = document.getElementById('fileInput');
-        let urlImagem = idx !== '' ? this.ofertas[parseInt(idx)].urlImagem : '';
-        if (fi.files?.[0]) {
-            const vImg = Validators.imagem(fi.files[0]);
-            if (!vImg.valido) { UI.erro(vImg.erro); return; }
-            console.log('🖼️ Convertendo imagem para base64...');
-            urlImagem = await UI.paraBase64(fi.files[0]);
-        }
-
-        const oferta = {
-            id:          idx !== '' ? this.ofertas[parseInt(idx)].id : Date.now(),
-            ...dados,
-            urlImagem,
-            dataCriacao: new Date().toISOString(),
+        const dados = {
+            dataInicio:document.getElementById('dataInicio').value,
+            dataFim:document.getElementById('dataFim').value,
+            linkProduto:document.getElementById('linkProduto').value,
+            textoOferta:document.getElementById('textoOferta').value,
+            tituloPagina:document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
+            campanha:String(document.getElementById('campanhaOferta').value||'').trim().toLowerCase(),
         };
-
-        if (idx !== '') this.ofertas[parseInt(idx)] = oferta;
-        else            this.ofertas.push(oferta);
-
-        const ok = await Storage.salvarOfertas(this.ofertas);
+        if(dados.campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(dados.campanha)){
+            UI.erro('Campanha individual inválida: até 60 letras minúsculas, números, _ ou -.');return;
+        }
+        const idxAtual = emEdicao ? this.ofertas.findIndex(o=>String(o.id)===String(idAlvo)) : null;
+        const val=Validators.oferta(dados,this.ofertas,idxAtual);
+        if (!val.valido) { UI.erro(val.erros[0]); return; }
+        const fi=document.getElementById('fileInput');
+        let urlImagem=emEdicao ? original.urlImagem : '';
+        if (fi.files?.[0]) {
+            const vImg=Validators.imagem(fi.files[0]);
+            if (!vImg.valido) { UI.erro(vImg.erro); return; }
+            urlImagem=await UI.paraBase64(fi.files[0]);
+        }
+        const oferta={
+            id:emEdicao?idAlvo:`of_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
+            ...dados, urlImagem,
+            dataCriacao:emEdicao?(original.dataCriacao || new Date().toISOString()):new Date().toISOString(),
+        };
+        const resultado=await Storage.modificarOferta({
+            tipo:emEdicao?'editar':'criar',id:oferta.id,oferta,
+            base:emEdicao?this.editandoBase:null
+        });
+        if (!resultado.ok) {
+            if (['conflito','excluida'].includes(resultado.motivo)) {
+                this._avisoConflito('⚠️ Alteração simultânea detectada. A oferta foi modificada por outra conta. Seu formulário foi preservado; copie os dados e reabra a oferta antes de salvar novamente.');
+                UI.erro('Conflito: a outra alteração foi preservada. Não sobrescrevemos a oferta.');
+            } else UI.erro('Não foi possível salvar a oferta no Firebase. Nada foi sobrescrito.');
+            return;
+        }
+        this.ofertas=resultado.ofertas;
         this.renderLista();
         this.cancelarEdicao();
-        ok ? UI.ok('Oferta salva e sincronizada!') : UI.ok('Oferta salva localmente (Firebase offline)');
+        UI.ok('Oferta salva com segurança e sincronizada com os demais administradores.');
+        if(typeof SegurancaPresenter!=='undefined')
+            SegurancaPresenter.registrarFirebase(emEdicao?'oferta_editada':'oferta_criada',oferta.id,
+                ['dataInicio','dataFim','linkProduto','textoOferta','tituloPagina','campanha','urlImagem']
+                    .filter(k=>!emEdicao||String(original?.[k]??'')!==String(oferta[k]??'')));
     },
 
-    excluirOferta(idx) {
-        if (!confirm('Excluir esta oferta?')) return;
-        console.log(`🗑️ Excluindo oferta [${idx}]:`, this.ofertas[idx]?.tituloPagina);
-        this.ofertas.splice(idx, 1);
-        Storage.salvarOfertas(this.ofertas);
+    async excluirOferta(idx) {
+        const oferta=this.ofertas[idx];
+        if(!oferta) return;
+        const titulo = oferta.tituloPagina || oferta.id || 'oferta';
+        if(!confirm('ATENÇÃO: excluir a oferta "'+titulo+'" é irreversível sem um backup. Deseja continuar?'))return;
+        const digitado=prompt('Para confirmar a exclusão, digite EXCLUIR em letras maiúsculas:');
+        if(digitado !== 'EXCLUIR'){UI.erro('Exclusão cancelada.');return;}
+        const resultado=await Storage.modificarOferta({
+            tipo:'excluir',id:oferta.id,base:Storage.assinaturaOferta(oferta)
+        });
+        if (!resultado.ok) {
+            UI.erro(['conflito','excluida'].includes(resultado.motivo)
+                ? 'Esta oferta foi alterada ou excluída por outra conta. A exclusão foi cancelada.'
+                : 'Não foi possível excluir no Firebase.');
+            return;
+        }
+        this.ofertas=resultado.ofertas;
         this.renderLista();
-        UI.ok('Oferta excluída!');
+        UI.ok('Oferta excluída e sincronizada.');
+        if(typeof SegurancaPresenter!=='undefined')
+            SegurancaPresenter.registrarFirebase('oferta_excluida',oferta.id);
     },
 
     // ── PREVIEW EM TEMPO REAL ────────────────
@@ -268,35 +502,91 @@ const AdminPresenter = {
 
     // ── CONFIG EM BREVE ──────────────────────
 
-    async salvarConfigEmBreve() {
-        const fp = document.getElementById('filePadrao');
-        let imagem = 'img/produto.png';
-
-        if (fp.files?.[0]) {
-            const v = Validators.imagem(fp.files[0]);
-            if (!v.valido) { UI.erro(v.erro); return; }
-            imagem = await UI.paraBase64(fp.files[0]);
-        } else {
-            const p = document.getElementById('previewPadrao');
-            if (p?.src) imagem = p.src;
+    _statusAparencia(texto, erro=false) {
+        const el = document.getElementById('aparenciaStatus');
+        if (el) { el.textContent = texto; el.style.color = erro ? '#c0222b' : '#368355'; }
+    },
+    _logoOriginalPendente: false,
+    _imagemOriginalPendente: false,
+    previewLogoPortal() {
+        const f = document.getElementById('fileLogoPortal')?.files?.[0];
+        if (!f) return;
+        if (!['image/png','image/jpeg','image/webp'].includes(f.type) || f.size > 6*1024*1024) {
+            this._statusAparencia('Use PNG, JPG ou WebP de até 6 MB.', true); return;
         }
-
-        Storage.salvarConfigEmBreve({
-            imagem,
-            titulo:   document.getElementById('tituloPadrao').value  || 'EM BREVE',
-            mensagem: document.getElementById('mensagemPadrao').value || '',
-        });
-        UI.ok('Configurações salvas!');
+        this._logoOriginalPendente = false;
+        const r = new FileReader();
+        r.onload = () => { const p=document.getElementById('previewLogoPortal'); if (p) p.src=r.result; };
+        r.readAsDataURL(f);
+    },
+    restaurarLogoPortal() {
+        this._logoOriginalPendente = true;
+        const file=document.getElementById('fileLogoPortal'); if(file) file.value='';
+        const p=document.getElementById('previewLogoPortal'); if(p) p.src='img/logo.png';
+        this._statusAparencia('Logo original selecionada. Clique em Salvar aparência para publicar.');
+    },
+    restaurarImagemPadrao() {
+        this._imagemOriginalPendente = true;
+        const file=document.getElementById('filePadrao'); if(file) file.value='';
+        const p=document.getElementById('previewPadrao'); if(p) p.src='img/produto.png';
+        this._statusAparencia('Imagem original selecionada. Clique em Salvar aparência para publicar.');
+    },
+    async salvarConfigEmBreve() {
+        const btn=document.getElementById('btnSalvarAparencia');
+        if(btn) btn.disabled = true;
+        this._statusAparencia('Otimizando as imagens e salvando no Firebase…');
+        try {
+            const anterior = AparenciaPortal.dados || AparenciaPortal.padrao;
+            const legado = AparenciaPortal.dados ? null : Storage.carregarConfigEmBreve();
+            const imagemAnterior = legado
+                ? AparenciaPortal._imagem(legado.imagem, AparenciaPortal.padrao.imagem, 280000)
+                : anterior.imagem;
+            const arquivoLogo = document.getElementById('fileLogoPortal')?.files?.[0];
+            const arquivoPadrao = document.getElementById('filePadrao')?.files?.[0];
+            const logo = this._logoOriginalPendente ? 'img/logo.png' : arquivoLogo
+                ? await AparenciaPortal.compactarImagem(arquivoLogo, 650, 180000) : anterior.logo;
+            const imagem = this._imagemOriginalPendente ? 'img/produto.png' : arquivoPadrao
+                ? await AparenciaPortal.compactarImagem(arquivoPadrao, 1100, 280000) : imagemAnterior;
+            const cfg = {
+                logo, imagem,
+                titulo: document.getElementById('tituloPadrao').value.trim() || 'EM BREVE',
+                mensagem: document.getElementById('mensagemPadrao').value.trim()
+            };
+            if(cfg.titulo.length>100 || cfg.mensagem.length>500) throw new Error('Título: até 100 caracteres; mensagem: até 500.');
+            await AparenciaPortal.salvar(cfg);
+            Storage.salvarConfigEmBreve({imagem:cfg.imagem,titulo:cfg.titulo,mensagem:cfg.mensagem});
+            document.getElementById('previewLogoPortal').src = cfg.logo;
+            document.getElementById('previewPadrao').src = cfg.imagem;
+            const lp=document.getElementById('fileLogoPortal'); if(lp) lp.value='';
+            const fp=document.getElementById('filePadrao'); if(fp) fp.value='';
+            this._logoOriginalPendente=false; this._imagemOriginalPendente=false;
+            this._statusAparencia('Aparência publicada! Atualize o portal para conferir.');
+            UI.ok('Aparência salva no Firebase e disponível para todos os dispositivos.');
+            if(typeof SegurancaPresenter!=='undefined')
+                SegurancaPresenter.registrarFirebase('aparencia_alterada','portal');
+        } catch (erro) {
+            this._statusAparencia('Não foi possível salvar: ' + (erro.message||erro),true);
+        } finally {if(btn) btn.disabled = false;}
     },
 
-    _carregarConfigEmBreve() {
-        const cfg = Storage.carregarConfigEmBreve();
-        if (!cfg) return;
-        console.log('⚙️ Config "Em Breve" carregada');
-        if (cfg.imagem && cfg.imagem !== 'img/produto.png')
-            document.getElementById('previewPadrao').src = cfg.imagem;
-        if (cfg.titulo)   document.getElementById('tituloPadrao').value   = cfg.titulo;
-        if (cfg.mensagem) document.getElementById('mensagemPadrao').value = cfg.mensagem;
+    async _carregarConfigEmBreve() {
+        const local = Storage.carregarConfigEmBreve();
+        try {
+            const cfg = await AparenciaPortal.carregar();
+            if (AparenciaPortal.dados || !local) {
+                document.getElementById('previewPadrao').src=cfg.imagem;
+                document.getElementById('tituloPadrao').value=cfg.titulo;
+                document.getElementById('mensagemPadrao').value=cfg.mensagem;
+            } else {
+                document.getElementById('previewPadrao').src=local.imagem||cfg.imagem;
+                document.getElementById('tituloPadrao').value=local.titulo||cfg.titulo;
+                document.getElementById('mensagemPadrao').value=local.mensagem||cfg.mensagem;
+                this._statusAparencia('Configuração local antiga detectada. Revise e clique em Salvar para publicar.');
+            }
+            document.getElementById('previewLogoPortal').src=cfg.logo;
+            } catch (erro) {
+            this._statusAparencia('Não foi possível carregar o Firebase: '+(erro.message||erro),true);
+        }
     },
 
     // ── DRAG & DROP ──────────────────────────
