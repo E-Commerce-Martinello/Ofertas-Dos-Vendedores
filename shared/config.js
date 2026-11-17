@@ -1,5 +1,5 @@
 /**
- * Martinello v1.6.17 — IDENTICO nos repositorios de homologacao e oficial.
+ * Martinello v1.6.18 — IDENTICO nos repositorios de homologacao e oficial.
  * Configuracao de dois ambientes — publicar o MESMO arquivo nos dois GitHub Pages:
  * este arquivo e publico: nao inclua segredos, service accounts ou tokens nele.
  * Identificacao estrita por hostname + nome do repositorio.
@@ -21,7 +21,7 @@ const MART_SERVICOS = Object.freeze({
       messagingSenderId: '139304759090',
       appId: '1:139304759090:web:8dbc12dce295ff3c55312b'
     },
-    adminApiUrl: 'https://script.google.com/macros/s/AKfycbwhjDIBES-sLK0ZVBkdqZkuMXuVw8YLjWKU08ahoN_Oy1_hrMEnyQeHnrLsuvasmNzr/exec',
+    adminApiUrl: 'https://script.google.com/macros/s/AKfycbwhjDlBES-sLK0ZVBkdqZkuMXuVw8YLjWKU08ahoN_Oy1_hrMEnyQeHnrLsuvasmNzr/exec',
     adminProxyUrl: 'https://martinello-admin-teste.loan-martinello.workers.dev/',
     portalEventsApiUrl: 'https://script.google.com/macros/s/AKfycbzXPgbhDvQBhvj-VkiwOpvLyn6kPONPfBgeD0y16idC0nQW7rfYP4kHG5msxhv05uD-/exec'
   },
@@ -97,7 +97,7 @@ const CONFIG = Object.freeze({
   rastreioTimeout:5000,
   rastreioFormularioLegado:false,
   urlBase:'https://www.martinello.com.br/parceiros/',
-  CACHE_VERSION:'1.6.17',
+  CACHE_VERSION:'1.6.18',
   SESSION_KEY:'adminSessao_'+MART_AMBIENTE,
   MAX_TENTATIVAS:5,
   BLOQUEIO_MS:5*60*1000,
