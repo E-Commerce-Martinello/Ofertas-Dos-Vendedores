@@ -8,6 +8,7 @@ const IndexPresenter = {
     _assinatura: '',
     pararSyncOfertas: null,
     _rankingSolicitado: '',
+    _ultimaTentativaRanking: 0,
     _aparenciaOuvindo: false,
     _selecaoManual: false,
     _destaqueAnterior: undefined,
@@ -112,9 +113,10 @@ const IndexPresenter = {
 
     _atualizarRanking(ativas) {
         const ids = ativas.map(o=>String(o.id)).sort().join(',');
-        if (ids === this._rankingSolicitado) return;
-        this._rankingSolicitado = ids;
         if (!ids) return;
+        if (ids === this._rankingSolicitado && Date.now()-this._ultimaTentativaRanking<60000) return;
+        this._rankingSolicitado = ids;
+        this._ultimaTentativaRanking = Date.now();
         RankingOfertas.carregar(ativas).then(() => {
             // Nunca aplicar resultado de um conjunto desatualizado.
             if (this._rankingSolicitado !== ids) return;
@@ -198,6 +200,9 @@ const IndexPresenter = {
     },
 
     _tick() {
+        // Atualizar a oferta mais acionada quando voltar a conexão, inclusive no celular.
+        if(!document.hidden && this.ofertas.length && Date.now()-this._ultimaTentativaRanking>=60000)
+            this._atualizarRanking(this._ativas());
         const agora = getHorarioBrasilia();
         document.getElementById('infoHoraBrasilia').textContent = formatarBrasilia(agora);
         const atual = this._ativas(agora);
@@ -299,7 +304,10 @@ const IndexPresenter = {
             // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
             const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
             // O aviso será exibido depois de preparar a mensagem, imediatamente antes do compartilhamento.
-            if(vendedorAtivo!==true&&vendedorAtivo!==false)UI.erro('Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
+            if(vendedorAtivo!==true&&vendedorAtivo!==false){
+                UI.erro('A matrícula não pôde ser confirmada pelo Apps Script. Confira a conexão e tente novamente. Nenhum link sem atribuição foi gerado.');
+                return;
+            }
             if (vendedorAtivo === true) {
                 const continuar = await TelefonePortal.garantir(cod);
                 if (!continuar) return;
@@ -309,6 +317,9 @@ const IndexPresenter = {
             await CampanhasPortal.carregar();
             const link = LinkTrack.urlCompartilhavel(oferta,cod,vendedorAtivo===true);
             const msg = formatarTexto(oferta.textoOferta, link, cod);
+            if(msg.includes('\uFFFD')){
+                UI.erro('Aviso: esta oferta contém emojis corrompidos (�). Peça ao administrador para corrigir o texto original.');
+            }
             // Não atribuir acesso de não vendedor aos rankings de vendedores ativos.
             if(vendedorAtivo===true){
                 const registro = AnalyticsService.registrarInicio(oferta, cod)

@@ -477,6 +477,7 @@ const AdminPresenter = {
         document.getElementById('dataFim').value            = '';
         document.getElementById('linkProduto').value        = '';
         document.getElementById('textoOferta').value        = '';
+        this.verificarCodificacaoTexto();
         document.getElementById('tituloPagina').value       = 'DISPARO EM ANDAMENTO!';
         document.getElementById('campanhaOferta').value     = '';
         document.getElementById('skuOferta').value='';
@@ -490,6 +491,13 @@ const AdminPresenter = {
         document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
     },
 
+    verificarCodificacaoTexto() {
+        const input=document.getElementById('textoOferta');
+        const aviso=document.getElementById('textoOfertaAvisoCodificacao');
+        const corrompido=String(input?.value||'').includes('\uFFFD');
+        if(aviso)aviso.hidden=!corrompido;
+        return corrompido;
+    },
     editarOferta(idx) {
         const o = this.ofertas[idx];
         if (!o) { UI.erro('Oferta não encontrada'); return; }
@@ -506,6 +514,7 @@ const AdminPresenter = {
         document.getElementById('dataFim').value            = o.dataFim;
         document.getElementById('linkProduto').value        = o.linkProduto || '';
         document.getElementById('textoOferta').value        = o.textoOferta || '';
+        this.verificarCodificacaoTexto();
         document.getElementById('tituloPagina').value       = o.tituloPagina || 'DISPARO EM ANDAMENTO!';
         document.getElementById('campanhaOferta').value     = o.campanha || '';
         document.getElementById('skuOferta').value=o.sku||'';
@@ -543,6 +552,7 @@ const AdminPresenter = {
         const prev=document.getElementById('preview');
         if(o.urlImagem){prev.src=o.urlImagem;prev.style.display='block';document.getElementById('btnRemoverImagem').style.display='inline-block';}
         else this._removerImagem();
+        this.verificarCodificacaoTexto();
         this._atualizarPreview();
         document.getElementById('formNovaOferta').style.display='block';
         document.getElementById('formNovaOferta').scrollIntoView({behavior:'smooth'});
@@ -609,7 +619,7 @@ const AdminPresenter = {
             urlImagem=await UI.paraBase64(fi.files[0]);
         }
         if(!dados.rascunho && !urlImagem){UI.erro('Adicione a imagem antes de publicar a oferta.');return;}
-        if(!dados.rascunho && dados.textoOferta.includes('\uFFFD')){UI.erro('O texto contém caracteres de substituição (�); revise os emojis antes de publicar.');return;}
+        if(!dados.rascunho && dados.textoOferta.includes('\uFFFD')){UI.erro('O texto já contém caracteres corrompidos (�). Recoloque os emojis originais antes de publicar.');return;}
         if(!dados.rascunho){
             try{const u=new URL(dados.linkProduto);
                 if(u.protocol!=='https:'||!['martinello.com.br','www.martinello.com.br'].includes(u.hostname)){

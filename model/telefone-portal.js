@@ -52,17 +52,34 @@ const TelefonePortal = {
     });
   },
   _matriculasPendentes: new Map(),
-  consultarMatricula(rubi) {
-    const url=this._endpoint(); if(!url)return Promise.resolve(null);
+  // Duas tentativas curtas ajudam quando o Web App precisa iniciar no celular.
+  // Não classificar matrícula como inativa diante de timeout ou erro de rede.
+  async consultarMatricula(rubi) {
+    const url=this._endpoint();
+    if(!url)return null;
+    for(let i=0;i<2;i++){
+      const resultado=await this._consultarMatriculaUmaVez(rubi,url);
+      if(resultado!==null)return resultado;
+      if(i===0)await new Promise(resolve=>setTimeout(resolve,450));
+    }
+    return null;
+  },
+  _consultarMatriculaUmaVez(rubi,url) {
     const requestId=`ma_${Date.now()}_${Math.random().toString(36).slice(2,13)}`;
     return new Promise(resolve=>{
-      const script=document.createElement('script'); script.async=true;
-      const concluir=d=>{clearTimeout(timer);this._matriculasPendentes.delete(requestId);script.remove();resolve(d);};
-      const timer=setTimeout(()=>concluir(null),9000);
+      let finalizado=false,timer;
+      const script=document.createElement('script');script.async=true;
+      const concluir=d=>{
+        if(finalizado)return;
+        finalizado=true;clearTimeout(timer);this._matriculasPendentes.delete(requestId);
+        script.remove();resolve(d);
+      };
+      timer=setTimeout(()=>concluir(null),12000);
       this._matriculasPendentes.set(requestId,concluir);
       script.onerror=()=>concluir(null);
       const qs=new URLSearchParams({action:'consultarMatricula',matricula:rubi,requestId});
-      script.src=`${url}?${qs}`; document.head.appendChild(script);
+      script.src=`${url}?${qs}`;
+      document.head.appendChild(script);
     });
   },
   receberMatricula(dados) {
