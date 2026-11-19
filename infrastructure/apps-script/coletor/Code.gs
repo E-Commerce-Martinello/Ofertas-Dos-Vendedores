@@ -33,10 +33,13 @@ function doGet(e) {
     return ContentService.createTextOutput('/* consulta inválida */')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
-  let validado = false, disponivel=true;
-  try { validado = martEvtTelefoneValidadoCadastro_(rubi); }
-  catch (erro) { disponivel=false; console.warn('Consulta telefone indisponível:',String(erro)); }
-  const dados = JSON.stringify({requestId,validado,disponivel});
+  let validado=false,solicitado=false,disponivel=true;
+  try { validado=martEvtTelefoneValidadoCadastro_(rubi); }
+  catch(erro){disponivel=false;console.warn('Consulta telefone indisponível:',String(erro));}
+  try { solicitado=martEvtTelefoneJaSolicitado_(rubi); }
+  catch(erro){disponivel=false;console.warn('Consulta pedidos de telefone indisponível:',String(erro));}
+  // Somente booleanos: nunca expor nome, telefone, filial, data ou status do pedido.
+  const dados=JSON.stringify({requestId,validado,solicitado,disponivel});
   return ContentService.createTextOutput('window.MartinelloTelefoneReceber&&window.MartinelloTelefoneReceber('+dados+');')
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
@@ -184,6 +187,24 @@ function martEvtAbaFone_() {
   return sh;
 }
 
+// Consulta pública retorna apenas se a matrícula JÁ FEZ pedido de telefone.
+// Evita solicitar de novo quando o celular troca navegador ou limpa o cache.
+function martEvtTelefoneJaSolicitado_(rubi) {
+  if(!/^\d{3,5}$/.test(rubi))return false;
+  const cache=CacheService.getScriptCache(),key='mart19_fone_solicitado_'+rubi;
+  const salvo=cache.get(key);
+  if(salvo==='1'||salvo==='0')return salvo==='1';
+  const sh=SpreadsheetApp.openById(MART_EVT_SHEET_ID).getSheetByName(MART_EVT_FONE_ABA);
+  if(!sh||sh.getLastRow()<2){cache.put(key,'0',120);return false;}
+  if(sh.getLastRow()>20000)throw new Error('Limite seguro de consultas excedido');
+  // C = matrícula, D = telefone, E = status; ler somente C e E, NUNCA enviar D.
+  const n=sh.getLastRow()-1;
+  const matriculas=sh.getRange(2,3,n,1).getDisplayValues();
+  const existe=matriculas.some(row=>String(row[0]||'').replace(/^'/,'').trim()===rubi);
+  cache.put(key,existe?'1':'0',existe?3600:120);
+  return existe;
+}
+
 function martEvtSolicitarTelefone_(p) {
   if(!martEvtOrigemPermitida_(p.origem)) return martEvtResposta_({ok:false});
   const rubi=String(p.matricula||'').trim();
@@ -206,6 +227,7 @@ function martEvtSolicitarTelefone_(p) {
     const telefoneTexto='\''+fone, rubiTexto='\''+rubi;
     sh.appendRow([Utilities.getUuid(),agora,rubiTexto,telefoneTexto,'PENDENTE','portal',tipo,declaraGrupo]);
     cache.put(chave,'1',86400);
+    cache.put('mart19_fone_solicitado_'+rubi,'1',3600);
     props.setProperties({MART_EVT_FONE_DIA:dia,MART_EVT_FONE_TOTAL:String(atual+1)});
     return martEvtResposta_({ok:true,gravado:true});
   } catch(e){console.warn('Solicitacao recusada',String(e));return martEvtResposta_({ok:false});}
