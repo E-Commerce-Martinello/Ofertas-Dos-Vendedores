@@ -94,3 +94,25 @@ test('UTMs do destino substituem somente UTMs anteriores, mantendo pesquisa e fi
   assert.equal(destino.searchParams.get('utm_id'),'vendedores_zap');
   assert.equal(destino.searchParams.getAll('utm_source').length,1);
 });
+
+test('uma busca pode representar SKUs diferentes sem falso duplicado na importação',()=>{
+  const elementos={
+    importOfertasPrevia:{innerHTML:''},
+    importOfertasPreviaCard:{hidden:true},
+    importOfertasConfirmar:{disabled:true}
+  };
+  const doc={getElementById:id=>elementos[id]};
+  const importer=new Function('AdminPresenter','document',
+    fonte('presenter/ofertas-import-presenter.js')+';return OfertasImportPresenter;')(
+      {ofertas:[],rascunhos:[]},doc);
+  const linha=(sku,texto)=>({url:urlBusca,sku,titulo:'Geladeiras em cores',
+    texto,campanha:'novembro_2026',inicio:'2026-11-20',fim:'2026-11-30'});
+  importer._ler=(row,field)=>String(row[field]||'');
+  importer._setStatus=()=>{};
+  importer.linhas=[linha('GEL001','Preta'),linha('GEL002','Branca'),linha('GEL001','Preta de novo')];
+  importer.prever();
+  assert.equal(importer.previa[0].duplicadoArquivo,false);
+  assert.equal(importer.previa[1].duplicadoArquivo,false);
+  assert.equal(importer.previa[2].duplicadoArquivo,true);
+  assert.equal(elementos.importOfertasConfirmar.disabled,false);
+});
