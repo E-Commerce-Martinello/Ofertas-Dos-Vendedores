@@ -44,6 +44,7 @@ const IndexPresenter = {
             else { this._syncFirebase(); if (!this.intervalo) this.intervalo = setInterval(() => this._tick(), 1000); }
         });
         await this._syncFirebase();
+        this._posicionarEntrada();
         this.pararSyncOfertas=Storage.escutarOfertas(ofertas => {
             this._aplicarOfertas(ofertas);
             this._assinatura=this._ativas().map(o=>String(o.id)).join(',');
@@ -51,6 +52,34 @@ const IndexPresenter = {
         // Identidade visual pública: atualizada em todos os celulares e computadores.
         this._carregarAparencia();
         // A assinatura do Firebase já notifica a cada alteração; evita consultas repetidas.
+    },
+
+    _posicionarEntrada() {
+        if(this._entradaPosicionada || !this.ofertaAtual)return;
+        this._entradaPosicionada=true;
+        const alvo=document.getElementById('areaGerarOferta');
+        const foto=document.getElementById('fotoProduto');
+        let cancelado=false,concluido=false,timer;
+        const cancelar=()=>{cancelado=true;limpar();};
+        const eventos=['pointerdown','touchstart','wheel','keydown'];
+        const limpar=()=>{
+            clearTimeout(timer);
+            foto?.removeEventListener('load',posicionar);
+            foto?.removeEventListener('error',posicionar);
+            eventos.forEach(e=>window.removeEventListener(e,cancelar));
+        };
+        const posicionar=()=>{
+            if(concluido)return;
+            concluido=true;limpar();
+            requestAnimationFrame(()=>{if(!cancelado)alvo?.scrollIntoView({block:'start',behavior:'instant'});});
+        };
+        eventos.forEach(e=>window.addEventListener(e,cancelar,{passive:true}));
+        if(!foto || foto.complete)posicionar();
+        else {
+            foto.addEventListener('load',posicionar,{once:true});
+            foto.addEventListener('error',posicionar,{once:true});
+            timer=setTimeout(posicionar,1800);
+        }
     },
 
     async _carregarAparencia() {
@@ -148,10 +177,9 @@ const IndexPresenter = {
         const escolhida=PortalPreferencias.destaque(ativas,getHorarioBrasilia());
         const cards=[];
         const mais=ativas.find(o=>String(o.id)===lider);
-        if(mais)cards.push({o:mais,selo:'★ MAIS ACIONADA'});
-        if(escolhida && String(escolhida.id)!==String(mais?.id))cards.push({o:escolhida,selo:'✦ DESTAQUE DO DIA'});
-        // Caso coincidam, exibir um único card com identificação combinada.
-        if(escolhida && mais && String(escolhida.id)===String(mais.id))cards[0].selo='★ MAIS ACIONADA · DESTAQUE DO DIA';
+        if(escolhida)cards.push({o:escolhida,selo:'✦ OFERTA EM DESTAQUE'});
+        if(mais && String(mais.id)!==String(escolhida?.id))cards.push({o:mais,selo:'★ MAIS ACIONADA'});
+        if(escolhida && mais && String(escolhida.id)===String(mais.id))cards[0].selo='✦ OFERTA EM DESTAQUE · ★ MAIS ACIONADA';
         const ids=new Set(cards.map(c=>String(c.o.id)));
         secao.hidden=ativas.length<2 && !cards.length;
         total.textContent=`${ativas.length} oferta${ativas.length===1?'':'s'} ${ativas.length===1?'disponível':'disponíveis'}`;
