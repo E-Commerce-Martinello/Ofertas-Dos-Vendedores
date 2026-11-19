@@ -205,8 +205,6 @@ const IndexPresenter = {
         btn.disabled = !oferta || this.enviando;
         const codigo=document.getElementById('cod')?.value?.trim()||'';
         const pronto=this._preparoValido(oferta,codigo);
-        const copiar=document.getElementById('btnCopiarLegenda');
-        if(copiar)copiar.hidden=!pronto;
         const valida=Validators.matricula(codigo);
         const falha=this._preparoFalha && this._preparoFalha.chave===this._chavePreparo(oferta,codigo);
         const mensagem=!oferta?'EM BREVE':!valida?'DIGITE SUA MATRÍCULA':pronto
@@ -395,19 +393,8 @@ const IndexPresenter = {
             // inexistente; nunca trocar silenciosamente um link de vendedor por genérico.
             const ativo=await TelefonePortal.consultarMatricula(matricula);
             if(!this._preparoAindaAtual(oferta,matricula,chave,token))return;
-            let atribuicaoNaoConfirmada=false;
             if(ativo!==true&&ativo!==false){
-                // Mantém o comportamento de emergência da versão antiga, mas
-                // NUNCA troca silenciosamente a matrícula por link padrão.
-                // O usuário decide sabendo que a atribuição pode falhar.
-                const continuar=typeof window.confirm==='function' && window.confirm(
-                    'Não foi possível consultar o Apps Script para confirmar a matrícula '+matricula+'.\n\n'+
-                    'Deseja preparar um link de PARCEIRO usando esta matrícula mesmo assim? '+
-                    'A atribuição da venda NÃO está garantida até a matrícula ser validada.\n\n'+
-                    'CANCELAR = tentar validar novamente depois.');
-                if(!continuar)
-                    throw new Error('Matrícula não confirmada no Apps Script. Toque em TENTAR VALIDAR NOVAMENTE.');
-                atribuicaoNaoConfirmada=true;
+                throw new Error('Não foi possível confirmar a matrícula. A conexão com o coletor está indisponível. Toque em TENTAR VALIDAR NOVAMENTE.');
             }
             if(ativo===true){
                 const continuar=await TelefonePortal.garantir(matricula);
@@ -420,7 +407,7 @@ const IndexPresenter = {
                 if(!CampanhasPortal.slug(oferta.campanha))throw e;
             });
             if(!this._preparoAindaAtual(oferta,matricula,chave,token))return;
-            const link=LinkTrack.urlCompartilhavel(oferta,matricula,ativo===true||atribuicaoNaoConfirmada);
+            const link=LinkTrack.urlCompartilhavel(oferta,matricula,ativo===true);
             const original=String(oferta.textoOferta||'');
             if(original.includes('\uFFFD'))throw new Error('O texto da oferta contém caracteres corrompidos (�). Corrija os emojis no admin.');
             const mensagem=formatarTexto(original,link,matricula);
@@ -439,8 +426,6 @@ const IndexPresenter = {
                 campanha:String(oferta.campanha||''),criadoEm:Date.now(),preparado,ativo:ativo===true
             };
             this._preparoFalha=null;
-            if(atribuicaoNaoConfirmada)
-                UI.erro('Atenção: link gerado com matrícula não confirmada. Confirme o cadastro para garantir a atribuição da venda.');
             Storage.salvarUltimaMatricula(matricula);
         }catch(e){
             if(this._preparoAindaAtual(oferta,matricula,chave,token)){
@@ -471,7 +456,7 @@ const IndexPresenter = {
         if(!this._preparoValido(oferta,codigo)){
             this._preparoFalha=null;
             this._agendarPreparo(oferta,codigo,true);
-            UI.erro('A oferta está sendo preparada. Compartilhe quando o botão estiver disponível.');
+            UI.ok('Consultando o cadastro e preparando a oferta. Aguarde o botão ficar disponível.');
             this._renderOferta(oferta);
             return;
         }

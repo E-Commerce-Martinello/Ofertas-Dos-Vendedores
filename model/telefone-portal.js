@@ -30,33 +30,44 @@ const TelefonePortal = {
     const url=String(CONFIG.portalEventsApiUrl||'').trim();
     return /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url) ? url : '';
   },
-  // Consulta pública por JSONP: retorna somente dois booleanos,
-  // validado e solicitado. Não lê nome ou número de telefone do vendedor.
-  consultar(rubi) {
-    const url=this._endpoint();
-    if (!url) return Promise.resolve(null);
+  // Primeiro usa o Worker (sem cookies do Google, evitando erro no Chrome mobile).
+  // Se ele ainda não foi atualizado, continua tentando o JSONP antigo.
+  async consultar(rubi) {
+    if(typeof ColetorPublico!=='undefined') {
+      const dados=await ColetorPublico.consultar('consultarTelefone',{matricula:rubi});
+      if(dados?.disponivel===true && typeof dados.validado==='boolean')
+        return {validado:dados.validado,solicitado:typeof dados.solicitado==='boolean'?dados.solicitado:null};
+      if(dados?.disponivel===false)return null;
+    }
+    return this._consultarTelefoneJsonp(rubi);
+  },
+  _consultarTelefoneJsonp(rubi) {
+    const url=this._endpoint();if(!url)return Promise.resolve(null);
     const requestId=`q_${Date.now()}_${Math.random().toString(36).slice(2,12)}`;
     return new Promise(resolve=>{
-      const s=document.createElement('script');s.async=true;
-      const timer=setTimeout(()=>terminar(null),10000);
-      const terminar=(v)=>{
-        clearTimeout(timer);
-        this._pending.delete(requestId);
-        s.remove();resolve(v);
+      let concluido=false;
+      const script=document.createElement('script');script.async=true;
+      const finalizar=v=>{
+        if(concluido)return;
+        concluido=true;clearTimeout(timer);this._pending.delete(requestId);
+        script.remove();resolve(v);
       };
-      this._pending.set(requestId,terminar);
-      s.onerror=()=>terminar(null);
-      const qs=new URLSearchParams({action:'consultarTelefone',matricula:rubi,requestId});
-      s.src=`${url}?${qs}`;
-      document.head.appendChild(s);
+      const timer=setTimeout(()=>finalizar(null),9000);
+      this._pending.set(requestId,finalizar);
+      script.onerror=()=>finalizar(null);
+      script.src=`${url}?${new URLSearchParams({action:'consultarTelefone',matricula:rubi,requestId})}`;
+      document.head.appendChild(script);
     });
   },
-  _matriculasPendentes: new Map(),
-  // Duas tentativas curtas ajudam quando o Web App precisa iniciar no celular.
-  // Não classificar matrícula como inativa diante de timeout ou erro de rede.
+  _matriculasPendentes:new Map(),
   async consultarMatricula(rubi) {
-    const url=this._endpoint();
-    if(!url)return null;
+    if(typeof ColetorPublico!=='undefined') {
+      const dados=await ColetorPublico.consultar('consultarMatricula',{matricula:rubi});
+      if(dados?.disponivel===true&&typeof dados.ativo==='boolean')return dados.ativo;
+      if(dados?.disponivel===false)return null;
+    }
+    // Contingência para browser ainda sem proxy; não presumir cadastro ativo.
+    const url=this._endpoint();if(!url)return null;
     for(let i=0;i<2;i++){
       const resultado=await this._consultarMatriculaUmaVez(rubi,url);
       if(resultado!==null)return resultado;
@@ -67,18 +78,17 @@ const TelefonePortal = {
   _consultarMatriculaUmaVez(rubi,url) {
     const requestId=`ma_${Date.now()}_${Math.random().toString(36).slice(2,13)}`;
     return new Promise(resolve=>{
-      let finalizado=false,timer;
+      let finalizado=false;
       const script=document.createElement('script');script.async=true;
       const concluir=d=>{
         if(finalizado)return;
         finalizado=true;clearTimeout(timer);this._matriculasPendentes.delete(requestId);
         script.remove();resolve(d);
       };
-      timer=setTimeout(()=>concluir(null),12000);
+      const timer=setTimeout(()=>concluir(null),12000);
       this._matriculasPendentes.set(requestId,concluir);
       script.onerror=()=>concluir(null);
-      const qs=new URLSearchParams({action:'consultarMatricula',matricula:rubi,requestId});
-      script.src=`${url}?${qs}`;
+      script.src=`${url}?${new URLSearchParams({action:'consultarMatricula',matricula:rubi,requestId})}`;
       document.head.appendChild(script);
     });
   },
@@ -94,21 +104,16 @@ const TelefonePortal = {
   async garantir(matricula) {
     const rubi=String(matricula||'').replace(/\D/g,'');
     const cache=this._cache(rubi);
-    if (cache==='validado' || cache==='solicitado') return true;
+    if(cache==='validado'||cache==='solicitado')return true;
     const estado=await this.consultar(rubi);
     if(estado?.validado===true){this._marcar(rubi,'validado');return true;}
     if(estado?.solicitado===true){
-      // Pedido já existe na planilha: não exigir o telefone novamente,
-      // mesmo após limpar cache ou acessar outro aparelho.
+      // Pedido já recebido no coletor: nunca solicitar telefone novamente.
       this._marcar(rubi,'solicitado');return true;
     }
     if(estado===null||estado.solicitado===null){
-      // Coletor indisponível ou versão antiga sem consulta de solicitações:
-      // nunca forçar um NOVO telefone sem poder verificar os pedidos existentes.
-      // O vendedor pode pedir o cadastro manualmente se precisar.
-      // Queda do coletor ou bloqueio do JSONP não pode impedir um vendedor validado
-      // de gerar ofertas. Em modo degradado, preservamos o fluxo anterior.
-      console.warn('Consulta de telefone indisponível; oferta liberada sem validação.');
+      // Falha de rede ou coletor antigo não autoriza solicitar o mesmo telefone de novo.
+      console.warn('Status do telefone indisponível; pedido não será repetido.');
       return true;
     }
     return this.solicitar(rubi);
@@ -160,8 +165,7 @@ const TelefonePortal = {
       // Sem CORS: resposta opaca indica despacho, não prova de gravação.
       await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
         body:campos.toString(),keepalive:true,cache:'no-store'});
-      // POST no-cors não confirma gravação; manter lembrança local temporária.
-      // O backend consulta pedidos por matrícula no próximo acesso.
+      // POST sem CORS não confirma a gravação. Confirmação local temporária.
       this._marcar(rubi,'solicitado');
       this.fechar(true);
     } catch(e) {

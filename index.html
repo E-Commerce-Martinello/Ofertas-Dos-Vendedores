@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="martinello-build" content="1.6.20-fix2-20261119">
+    <meta name="martinello-build" content="1.6.21-coletor-worker-20261119">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal do Vendedor - Martinello</title>
@@ -449,7 +449,6 @@ body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#
         </div>
       </section>
 
-        <button id="btnCopiarLegenda" type="button" hidden onclick="IndexPresenter.copiarTextoAlternativo()" style="margin:0 auto 12px;padding:10px 15px;max-width:100%;border:1px solid #be2630;border-radius:9px;background:transparent;color:inherit;font:700 12px Arial;cursor:pointer;">COPIAR LEGENDA PARA O WHATSAPP</button>
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
@@ -516,19 +515,20 @@ body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#
     <script src="shared/utils.js?v=1.6.20-fix2-20261119"></script>
     <script src="model/firebase-config.js?v=1.6.20-fix2-20261119"></script>
     <script src="model/appearance.js?v=1.6.20-fix2-20261119"></script>
-    <script src="model/campanhas.js?v=1.6.20-fix2-20261119"></script>
+    <script src="model/coletor-publico.js?v=1.6.21-coletor1"></script>
+    <script src="model/campanhas.js?v=1.6.21-coletor1"></script>
     <script src="model/link-track.js?v=1.6.20-fix2-20261119"></script>
     <script src="model/analytics.js?v=1.6.20-fix2-20261119"></script>
-    <script src="model/ranking-ofertas.js?v=1.6.20-fix2-20261119"></script>
+    <script src="model/ranking-ofertas.js?v=1.6.21-coletor1"></script>
     <script src="shared/telefones.js?v=1.6.20-fix2-20261119"></script>
-    <script src="model/telefone-portal.js?v=1.6.20-fix2-20261119"></script>
+    <script src="model/telefone-portal.js?v=1.6.21-coletor1"></script>
     <script src="model/horario.js?v=1.6.20-fix2-20261119"></script>
     <script src="model/storage.js?v=1.6.20-fix2-20261119"></script>
     <script src="model/validators.js?v=1.6.20-fix2-20261119"></script>
     <script src="view/ui.js?v=1.6.20-fix2-20261119"></script>
     <script src="presenter/api.js?v=1.6.20-fix2-20261119"></script>
     <script src="shared/portal-preferencias.js?v=1.6.20-fix2-20261119"></script>
-<script src="presenter/index-presenter.js?v=1.6.20-fix2-20261119"></script>
+<script src="presenter/index-presenter.js?v=1.6.21-coletor1"></script>
 <aside id="avisoNaoVendedor" hidden aria-labelledby="avisoNaoVendedorTitulo">
 <button type="button" class="aviso-fechar" aria-label="Fechar aviso e continuar" onclick="IndexPresenter.fecharAvisoNaoVendedor()">×</button>
 <div role="status" aria-live="polite">

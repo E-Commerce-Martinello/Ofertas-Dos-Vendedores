@@ -1,6 +1,6 @@
 /**
- * Gateway administrativo Martinello v1.6.19.
- * Variáveis: APPS_SCRIPT_URL (obrigatória), PAGES_ORIGIN (opcional, domínio exato *.pages.dev).
+ * Gateway administrativo Martinello v1.6.21 — com rota pública do coletor.
+ * Variáveis: APPS_SCRIPT_URL (admin), COLETOR_APPS_SCRIPT_URL (coletor), PAGES_ORIGIN (opcional).
  * A autenticação administrativa permanece no Apps Script; somente duas ações de gerente são públicas.
  */
 const ORIGEM_PERMITIDA = 'https://e-commerce-martinello.github.io';
@@ -20,7 +20,7 @@ function responder(corpo, status = 200, origem = ORIGEM_PERMITIDA) {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'private, no-store, max-age=0',
       'Access-Control-Allow-Origin': origem,
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '3600',
       'Vary': 'Origin',
@@ -76,6 +76,103 @@ async function receberJsonGoogle(upstream, campos) {
   }
 }
 
+// Leitura pública limitada do COLETOR, SEM alterar as rotas administrativas.
+// A proteção de origem é adicional, NÃO uma autenticação. O Apps Script já expõe
+// os mesmos booleanos/campanha via JSONP. Nenhum nome ou telefone é retornado.
+const PORTAL_ACOES = Object.freeze({
+  consultarMatricula: {prefix:'ma_', callback:'MartinelloMatriculaReceber'},
+  consultarTelefone: {prefix:'q_', callback:'MartinelloTelefoneReceber'},
+  consultarCampanha: {prefix:'cp_', callback:'MartinelloCampanhaReceber'},
+  rankingOfertas: {prefix:'rk_', callback:'MartinelloRankingReceber'}
+});
+
+async function consultarColetorPublico(request, env, retorno) {
+  const url=new URL(request.url);
+  const acao=String(url.searchParams.get('action')||'');
+  const conf=PORTAL_ACOES[acao];
+  if(!conf)return retorno({erro:'Ação pública não permitida.'},400);
+  const req=String(url.searchParams.get('requestId')||'');
+  if(!req.startsWith(conf.prefix)||!new RegExp('^'+conf.prefix+'[A-Za-z0-9_-]{8,48}$').test(req))
+    return retorno({erro:'Identificador de consulta inválido.'},400);
+  const upstream=String(env.COLETOR_APPS_SCRIPT_URL||'').trim();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(upstream))
+    return retorno({erro:'Configure COLETOR_APPS_SCRIPT_URL no Worker.'},503);
+
+  // Somente parâmetros conhecidos. Nunca permitir URLs, ações administrativas,
+  // nomes, telefones ou redirecionamento arbitrário nos dados solicitados.
+  const qs=new URLSearchParams({action:acao,requestId:req});
+  if(acao==='consultarMatricula'||acao==='consultarTelefone'){
+    const matricula=String(url.searchParams.get('matricula')||'');
+    if(!/^\d{3,5}$/.test(matricula))return retorno({erro:'Matrícula inválida.'},400);
+    qs.set('matricula',matricula);
+  }else if(acao==='rankingOfertas'){
+    const ids=String(url.searchParams.get('ids')||'');
+    const partes=ids.split(',');
+    if(!ids||ids.length>1600||partes.length>40||
+       !partes.every(id=>/^[A-Za-z0-9_-]{1,40}$/.test(id)))
+      return retorno({erro:'Identificadores de oferta inválidos.'},400);
+    qs.set('ids',ids);
+  }
+  if([...url.searchParams.keys()].some(k=>!['action','requestId','matricula','ids'].includes(k)))
+    return retorno({erro:'Parâmetro público não permitido.'},400);
+
+  const destino=new URL(upstream);
+  destino.search=qs.toString();
+  let resposta;
+  try {
+    // Google ContentService pode responder 302 e uma URL temporária; em alguns
+    // celulares/logins esse redirecionamento é bloqueado. Aqui o Worker o resolve.
+    const inicio=await fetch(destino.href,{method:'GET',redirect:'manual'});
+    resposta=inicio;
+    if([301,302,303].includes(inicio.status)){
+      let temp;
+      try{temp=new URL(inicio.headers.get('Location')||'');}catch(_){throw Error('REDIRECT_INVALIDO');}
+      if(temp.protocol!=='https:'||temp.hostname!=='script.googleusercontent.com')
+        throw Error('REDIRECT_INVALIDO');
+      for(const espera of [0,400,1100,2400]){
+        if(espera)await pausa(espera);
+        resposta=await fetch(temp.href,{method:'GET',redirect:'manual'});
+        if(resposta.status!==404)break;
+      }
+    }
+    if(!resposta.ok)throw Error('HTTP_GOOGLE_'+resposta.status);
+    const txt=await resposta.text();
+    if(txt.length>160000)throw Error('RESPOSTA_EXCESSIVA');
+    // JSONP transformado em JSON por leitura de texto. Nunca executar eval!
+    const prefixo='window.'+conf.callback+'&&window.'+conf.callback+'(';
+    const js=txt.trim();
+    if(!js.startsWith(prefixo)||!js.endsWith(');'))throw Error('JSONP_INVALIDO');
+    const dados=JSON.parse(js.slice(prefixo.length,-2));
+    if(dados?.requestId!==req||
+       (acao!=='rankingOfertas'&&typeof dados.disponivel!=='boolean'))
+      throw Error('JSONP_INVALIDO');
+    const resultado={ok:true,requestId:req,disponivel:acao==='rankingOfertas'?true:dados.disponivel};
+    if(acao==='consultarMatricula'){
+      if(typeof dados.ativo!=='boolean')throw Error('STATUS_INVALIDO');
+      resultado.ativo=dados.ativo;
+    }else if(acao==='consultarTelefone'){
+      if(typeof dados.validado!=='boolean')throw Error('STATUS_INVALIDO');
+      resultado.validado=dados.validado;
+      if(typeof dados.solicitado==='boolean')resultado.solicitado=dados.solicitado;
+    }else if(acao==='consultarCampanha'){
+      if(typeof dados.campanha!=='string'||typeof dados.utmSource!=='string'||typeof dados.utmId!=='string')
+        throw Error('CAMPANHA_INVALIDA');
+      resultado.campanha=dados.campanha;
+      resultado.utmSource=dados.utmSource;
+      resultado.utmId=dados.utmId;
+    }else{
+      if(typeof dados.ofertaId!=='string')throw Error('RANKING_INVALIDO');
+      resultado.ofertaId=dados.ofertaId;
+    }
+    return retorno(resultado);
+  } catch(e) {
+    // Não incluir request URL, matrícula, corpo da resposta ou tokens em logs.
+    const tipo=String(e?.message||'INDEFINIDO');
+    console.warn('Coletor público indisponível:',tipo.slice(0,65));
+    return retorno({erro:'O coletor não respondeu corretamente. Verifique a implantação do Apps Script e tente novamente.'},502);
+  }
+}
+
 export default {
   async fetch(request, env) {
     // A origem é uma restrição adicional; a autenticação REAL acontece na API.
@@ -83,6 +180,11 @@ export default {
     if (!origem) return new Response('Origem não autorizada.', { status: 403 });
     const retorno = (corpo, status = 200) => responder(corpo, status, origem);
     if (request.method === 'OPTIONS') return retorno({ ok: true });
+    const caminho=new URL(request.url).pathname;
+    if(caminho==='/portal-status'){
+      if(request.method!=='GET')return retorno({erro:'Método não permitido.'},405);
+      return consultarColetorPublico(request,env,retorno);
+    }
     if (request.method !== 'POST') return retorno({ erro: 'Método não permitido.' }, 405);
 
     const upstream = String(env.APPS_SCRIPT_URL || '').trim();
