@@ -1,0 +1,22 @@
+name: Validar Portal de Ofertas
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [release/portal-v1.6.19-integracao]
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Testar
+        run: node --test tests/*.test.cjs

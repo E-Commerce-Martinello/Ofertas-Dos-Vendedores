@@ -1,0 +1,30 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),crypto=require('node:crypto');
+function fixture(){
+ const base=[Array(13).fill('header'),['19000','Nome','1','','6581234670','historico-normalizado','ATIVO','ATIVO','IMPORTADO','ontem','ontem','obs','VALIDADO']],extras=[Array(8).fill('header'),['19000','','PENDENTE','NAO','11973485620','VALIDADO','NAO','ontem']];
+ let batches=[],released=0;const sh={getSheetId:()=>1,getLastRow:()=>2,getMaxRows:()=>10},fsheet={...sh,getSheetId:()=>2},ss={getSheetByName:()=>fsheet,getId:()=> 'test-sheet'};
+ const context={base,extras,grupo:{participantes:[],identificacoes:[]},registros:[{matricula:'19000',numero:base[1][4],telefonesExtras:{profissional:extras[1][4]}}],evidencia:'hash'};
+ const c=vm.createContext({Telefones:require('../shared/telefones.js'),Sheets:{Spreadsheets:{batchUpdate:(body,id)=>batches.push({body,id})}},LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>released++})},obterPlanilhaVendedoresV153_:()=>ss,obterAbaVendedoresV153_:()=>sh,MART1618_FONES_ABA:'Telefones_Vendedores',Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>Array.from(crypto.createHash('sha256').update(s).digest())}});
+ vm.runInContext(fs.readFileSync('infrastructure/apps-script/admin/Refinamento.gs','utf8'),c);c.mart19_contexto_=()=>context;
+ context.basePorMatricula=new Map([['19000',[base[1]]]]);context.extrasPorMatricula=new Map([['19000',[extras[1]]]]);
+ const payload={matricula:'19000',nome:'Nome novo',filial:'2',ativo:true,observacoes:'nova',telefonePessoal:'',telefoneProfissional:'11973485620',revision:c.mart19_revisionVendedor_(context,'19000')};
+ return {c,payload,batches,context,released:()=>released};
+}
+test('revisão obsoleta rejeita gravação sem escrita parcial',()=>{const f=fixture();assert.throws(()=>f.c.mart19_salvarVendedor_({...f.payload,revision:'old'},'admin'),/CONFLITO/);assert.equal(f.batches.length,0);assert.equal(f.released(),1);});
+test('cadastro e extras usam um lote; legado e texto preservados',()=>{const f=fixture();f.c.mart19_salvarVendedor_(f.payload,'admin');assert.equal(f.batches.length,1);const r=f.batches[0].body.requests;assert.equal(r.length,2);const values=r[0].updateCells.rows[0].values;assert.equal(values[4].userEnteredValue.stringValue,'6581234670');assert.equal(values[5].userEnteredValue.stringValue,'historico-normalizado');assert.equal(values[12].userEnteredValue.stringValue,'VALIDADO');assert.equal(values[1].userEnteredValue.stringValue,'Nome novo');assert.equal(values[4].userEnteredFormat.numberFormat.type,'TEXT');});
+test('novo telefone inválido ou colisão pendente impedem lote inteiro',()=>{const f=fixture();assert.throws(()=>f.c.mart19_salvarVendedor_({...f.payload,telefonePessoal:'20981234670'},'admin'),/DDD/);f.context.registros.push({matricula:'20000',numero:'65981234670'});assert.throws(()=>f.c.mart19_salvarVendedor_({...f.payload,telefonePessoal:'65981234670'},'admin'),/outra pessoa/);assert.equal(f.batches.length,0);});
+
+test('cadastro manual novo continua disponível em lote conjunto e sem sobrescrever legado',()=>{
+  const f=fixture();
+  const payload={...f.payload,matricula:'20000',nome:'Pessoa Nova',filial:'2',novo:true,
+    revision:'',telefonePessoal:'',telefoneProfissional:'',confirmarPessoal:false,confirmarProfissional:false};
+  const result=f.c.mart19_salvarVendedor_(payload,'admin');
+  assert.equal(result.matricula,'20000');
+  assert.equal(f.batches.length,1);
+  const requests=f.batches[0].body.requests;
+  assert.equal(requests.length,2);
+  const values=requests[0].updateCells.rows[0].values;
+  assert.equal(values[0].userEnteredValue.stringValue,'20000');
+  assert.equal(values[8].userEnteredValue.stringValue,'CADASTRO_MANUAL');
+  assert.equal(values[12].userEnteredValue.stringValue,'PENDENTE');
+  assert.equal(f.context.base[1][0],'19000');
+});

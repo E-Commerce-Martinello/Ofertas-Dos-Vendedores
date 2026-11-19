@@ -1,0 +1,231 @@
+/* Portal de Gerentes — página isolada da administração */
+/* Paleta unificada com view/admin.css e preferência 'tema' do administrador. */
+:root{color-scheme:light;font-family:Arial,Helvetica,sans-serif;
+  --bg:#f4f5f7;--panel:#fff;--panel-soft:#f8f9fb;--border:#d5d9e1;
+  --text:#242833;--muted:#616978;--red:#bd202b;--red-strong:#981b24;
+  --good:#187347;--bad:#b42332;--warning:#84520a;--focus:#236cd0;
+  --shadow:0 8px 28px #19233c0b}
+html.dark-mode{color-scheme:dark;--bg:#181b21;--panel:#232730;--panel-soft:#2b303b;
+  --border:#4c5565;--text:#f2f4f8;--muted:#bcc4d1;--red:#c72a36;
+  --red-strong:#e13745;--good:#91dfb1;--bad:#ffabb2;--warning:#ffd28a;
+  --focus:#89b8ff;--shadow:none}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.58}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+a{color:inherit}
+.topbar{background:var(--panel);border-bottom:1px solid var(--border);padding:17px max(22px,calc((100vw - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:1.08rem;letter-spacing:-.03em}
+.brand-mark{height:40px;width:40px;display:grid;place-items:center;border-radius:12px;background:var(--red);color:#fff;font-weight:900}
+.brand span span{font-size:.72rem;color:var(--muted);display:block;font-weight:600;letter-spacing:0}
+.link-simple{font-size:.84rem;text-decoration:none;border:1px solid var(--border);padding:9px 13px;border-radius:10px}
+main{max-width:1180px;margin:26px auto 80px;padding:0 20px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:17px;box-shadow:var(--shadow);padding:clamp(19px,3vw,30px)}
+.intro{margin-bottom:18px}.intro h1{font-size:clamp(1.38rem,3.4vw,2rem);line-height:1.2;margin:0 0 10px}.intro p{color:var(--muted);margin:0}
+.grid-login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.info-list{display:grid;gap:12px;margin-top:18px;color:var(--muted);font-size:.94rem}
+.info-list div{padding:13px 16px;background:var(--panel-soft);border-radius:10px}
+h2{margin:0 0 16px;font-size:1.18rem}
+p{margin-top:0}
+label{display:block;font-size:.86rem;font-weight:700;margin-bottom:7px}
+input,select,textarea{width:100%;padding:12px 13px;border:1px solid var(--border);background:var(--panel-soft);border-radius:10px;min-height:45px}
+input:focus,select:focus,textarea:focus{border-color:var(--focus)}
+.field{margin-bottom:15px}
+.small{font-size:.84rem;color:var(--muted)}
+.btn{border:1px solid var(--border);background:var(--panel-soft);border-radius:10px;min-height:44px;padding:10px 17px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:9px;text-align:center}
+.btn:hover:not(:disabled){filter:brightness(.96)}
+.btn-primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--red-strong);filter:none}
+.btn-full{width:100%}
+.btn-quiet{background:transparent}
+.status{margin-top:12px;padding:12px;border-radius:11px;background:var(--panel-soft);border:1px solid var(--border);font-size:.9rem}
+.status.error{border-color:var(--bad);color:var(--bad)}
+.status.success{border-color:var(--good);color:var(--good)}
+.info-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.info-head h1{font-size:clamp(1.3rem,3vw,1.85rem);margin:0}
+.muted{color:var(--muted)}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{border:1px solid var(--border);border-radius:999px;padding:5px 10px;color:var(--muted);font-weight:700;font-size:.78rem}
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--border);margin:16px 0 20px;overflow-x:auto}
+.tab{border:0;border-bottom:3px solid transparent;background:transparent;padding:12px 19px;min-height:44px;color:var(--muted);font-weight:800;white-space:nowrap}
+.tab[aria-selected="true"]{border-color:var(--red);color:var(--text)}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:19px}
+.controls .field{margin:0}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.kpi{padding:17px 13px;border:1px solid var(--border);border-radius:12px;background:var(--panel-soft)}
+.kpi strong{font-size:clamp(1.3rem,2.8vw,1.9rem);display:block;line-height:1.2}
+.kpi span{display:block;color:var(--muted);font-size:.78rem;margin-top:6px}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+.section-title h2{margin:0}
+.table-wrap{width:100%;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:680px}
+th{text-align:left;color:var(--muted);font-size:.75rem;letter-spacing:.035em;text-transform:uppercase;background:var(--panel-soft)}
+th,td{padding:13px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+td strong{font-weight:800}
+td small{color:var(--muted);display:block}
+.empty{padding:25px 16px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px}
+.seller-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.seller-card{padding:17px;border:1px solid var(--border);background:var(--panel-soft);border-radius:13px;min-width:0}
+.seller-card h3{font-size:.95rem;margin:0 0 4px;overflow-wrap:anywhere}
+.seller-card .info{color:var(--muted);font-size:.83rem;margin:4px 0 14px}
+.seller-card .indicators{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.badge{display:inline-flex;align-items:center;font-size:.73rem;font-weight:800;border-radius:8px;padding:5px 8px;background:var(--panel);border:1px solid var(--border)}
+.badge.good{color:var(--good)}.badge.bad{color:var(--bad)}.badge.warn{color:var(--warning)}
+dialog{width:min(96vw,520px);max-height:90dvh;overflow:auto;border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:17px;padding:24px}
+dialog::backdrop{background:rgba(0,0,0,.68)}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:700}
+.toggle input{appearance:none;width:49px;height:27px;min-height:27px;border:1px solid var(--border);border-radius:99px;background:var(--border);position:relative;flex:none;margin:0;transition:background .15s}
+.toggle input:after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;background:#fff;border-radius:50%;transition:transform .15s}
+.toggle input:checked{background:var(--good)}.toggle input:checked:after{transform:translateX(21px)}
+.toggle .on{display:none}.toggle input:checked~.on{display:inline}.toggle input:checked~.off{display:none}
+.footer-note{max-width:1180px;margin:18px auto;padding:0 20px 30px;color:var(--muted);font-size:.75rem}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-login{grid-template-columns:1fr}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.topbar{padding:12px 15px}.link-simple{font-size:.75rem;padding:8px}.brand{font-size:.95rem}.brand-mark{width:36px;height:36px}main{padding:0 12px;margin-top:14px}.panel{padding:18px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{grid-template-columns:1fr}.seller-grid{grid-template-columns:1fr}.dialog-actions>.btn{flex:1 1 100%}}
+
+/* Refinamento da vitrine administrativa, aplicado ao Portal de Gerentes. */
+body{font-size:14px}
+.panel,#gerentesPainel,#gerenteResultados,#gerenteCadastros{min-width:0;max-width:100%}
+main{width:100%;min-width:0;max-width:1180px}
+.topbar{box-shadow:none}
+.topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.topbar .link-simple{background:var(--panel);color:var(--text);font-size:13px;font-weight:700;min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+.topbar .link-simple:hover{border-color:var(--red)}
+.brand-mark{border-radius:10px}
+.panel{border-radius:12px;box-shadow:var(--shadow)}
+.info-list div,.seller-card,.kpi{border-radius:10px}
+.btn,input,select,textarea{border-radius:8px}
+input,select,textarea{background:var(--panel);min-width:0}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
+.btn{font-size:13px;font-weight:700}
+.tab{transition:color .15s,border-color .15s}
+.tab[aria-selected=true]{color:var(--red);border-bottom-color:var(--red)}
+.badge.bad{background:color-mix(in srgb,var(--bad) 8%,var(--panel));border-color:color-mix(in srgb,var(--bad) 35%,var(--border))}
+.badge.good{background:color-mix(in srgb,var(--good) 7%,var(--panel))}
+.badge.warn{background:color-mix(in srgb,var(--warning) 8%,var(--panel))}
+.ct-aviso{background:var(--panel-soft);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:9px;padding:14px;color:var(--text)}
+.gerente-ct-topo{padding:14px 14px 8px;margin:12px 0 14px;border:1px solid var(--border);border-radius:11px;background:var(--panel-soft)}
+.gerente-ct-topo .toggle{margin-bottom:10px;display:flex;flex-wrap:wrap}
+.gerente-ct-topo .small{margin:0 0 5px}
+dialog{max-width:calc(100vw - 20px)}
+#gerenteCamposCadastro[hidden],#gerenteCTOrientacao[hidden]{display:none!important}
+/* Relatório em cartões no celular: não depende de rolagem horizontal. */
+@media(max-width:700px){
+  .panel{padding:16px}
+  .tabs{overflow:visible;gap:0}
+  .tab{white-space:normal;flex:1 1 50%;font-size:.82rem;line-height:1.35;padding:12px 8px}
+  .table-wrap{overflow:visible;max-width:100%}
+  .table-wrap table,.table-wrap tbody{display:block;width:100%;min-width:0}
+  .table-wrap thead{display:none}
+  .table-wrap tr.ranking-vendedor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px;margin:0 0 12px;padding:15px;background:var(--panel-soft);border:1px solid var(--border);border-radius:11px;min-width:0}
+  .table-wrap tr.ranking-vendedor td{display:block;width:100%;min-width:0;border:0;padding:0;overflow-wrap:anywhere;word-break:normal}
+  .table-wrap tr.ranking-vendedor td:first-child{grid-column:1/-1;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .table-wrap tr.ranking-vendedor td:nth-child(4){grid-column:1/-1}
+  .table-wrap tr.ranking-vendedor td::before{content:attr(data-label);display:block;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.025em;margin-bottom:3px}
+  .table-wrap tr.ranking-vendedor td strong{font-size:.98rem}
+  .table-wrap tr.ranking-vazio{display:block;width:100%;background:var(--panel-soft);border-radius:11px}
+  .table-wrap tr.ranking-vazio td{display:block;padding:18px;width:100%;text-align:center}
+  .topbar{flex-wrap:wrap}
+  .topbar-actions{justify-content:flex-end}
+}
+@media(max-width:380px){.topbar .link-simple{font-size:11px;padding:8px 10px}.kpis{gap:8px}.kpi{padding:13px 9px}.panel{padding:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Identidade visual compartilhada com o Portal e Admin */
+.brand-logo{display:block;width:auto;height:52px;max-width:min(36vw,180px);object-fit:contain;flex-shrink:0}
+.brand-title{font-size:.84rem;font-weight:800;letter-spacing:0;color:var(--muted);line-height:1.25}
+@media(max-width:650px){.brand{gap:8px;min-width:0}.brand-logo{height:42px;max-width:140px}.brand-title{font-size:.75rem}}
+@media(max-width:380px){.brand-logo{height:36px;max-width:112px}.brand-title{font-size:.68rem}}
+
+/* Refinamento visual unificado com os tokens e cards do administrador. */
+:root{--red:#bd202b;--red-strong:#981b24;--shadow:0 8px 28px #19233c0b}
+html.dark-mode{--red:#c72a36;--red-strong:#e13745;--shadow:none}
+body{font-family:Arial,Helvetica,sans-serif}
+.topbar{min-height:94px;padding:16px max(20px,calc((100vw - 1180px)/2));gap:18px}
+.brand{gap:18px;min-width:0;letter-spacing:normal}
+.brand-logo{height:70px;max-width:215px}
+.brand-label{display:grid;gap:3px;min-width:0}
+.brand-label strong{font-size:1.03rem;letter-spacing:.025em;color:var(--text);line-height:1.18}
+.brand-label span{font-size:.76rem;font-weight:500;color:var(--muted);letter-spacing:normal}
+.gerentes-badge{display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1.35;font-weight:850;letter-spacing:.025em;border:1px solid color-mix(in srgb,var(--warning) 36%,var(--border));border-radius:999px;padding:7px 11px;background:color-mix(in srgb,var(--warning) 12%,var(--panel));color:var(--warning);white-space:nowrap}
+.topbar .link-simple{border-radius:999px;min-height:39px;padding:8px 15px;white-space:nowrap}
+main{margin-top:27px}
+.panel{border-radius:16px;padding:clamp(20px,2.6vw,29px);box-shadow:var(--shadow)}
+.grid-login{grid-template-columns:minmax(0,1.12fr) minmax(285px,.88fr);gap:18px}
+.grid-login>.panel:first-child{border-top:4px solid var(--red)}
+.gerentes-eyebrow{display:inline-flex;font-size:10px;letter-spacing:.1em;font-weight:850;color:var(--red);margin:0 0 12px}
+.intro h1{font-size:clamp(1.5rem,3.2vw,2.05rem);letter-spacing:-.02em;max-width:25ch}
+.intro p{max-width:52ch}
+#formLoginGerente{margin-top:25px;max-width:540px}
+#gerenteMatricula{min-height:49px}
+.btn-primary{box-shadow:0 5px 15px color-mix(in srgb,var(--red) 18%,transparent)}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:none}
+.btn-quiet,.link-simple{transition:background .15s ease,border-color .15s ease,transform .15s ease}
+.info-list{gap:10px;margin-top:8px}
+.info-list div{border:1px solid var(--border);background:var(--panel-soft);padding:15px;border-radius:11px}
+.info-list div strong{display:block;margin-bottom:5px;color:var(--text)}
+.info-head{padding-bottom:18px;border-bottom:1px solid var(--border)}
+.info-head h1{letter-spacing:-.02em;font-size:clamp(1.35rem,2.7vw,1.8rem)}
+.chip{color:var(--red);border-color:color-mix(in srgb,var(--red) 34%,var(--border));background:color-mix(in srgb,var(--red) 6%,var(--panel))}
+.tabs{gap:8px;margin-top:5px}
+.tab{border-radius:9px 9px 0 0;padding:13px 20px}
+.tab[aria-selected=true]{background:var(--panel-soft);color:var(--red);border-bottom-color:var(--red)}
+.controls{padding:15px;background:var(--panel-soft);border:1px solid var(--border);border-radius:12px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 15px;min-width:0;overflow-wrap:anywhere}
+.kpi strong{color:var(--red);font-weight:900;font-variant-numeric:tabular-nums}
+.kpi span{font-weight:650}
+.seller-card{background:var(--panel);border-radius:12px;transition:border-color .15s}
+.seller-card:hover{border-color:color-mix(in srgb,var(--red) 35%,var(--border))}
+.section-title{margin:20px 0 13px}
+.section-title h2{font-size:1.13rem}
+.table-wrap{border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.table-wrap th{background:var(--panel-soft)}
+.table-wrap td,.table-wrap th{padding:13px 15px}
+.field label{font-weight:700}
+input,select,textarea{min-height:46px;border-radius:9px;background:var(--panel)}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--focus) 45%,transparent);outline-offset:1px}
+.status{border-radius:10px}
+dialog{box-shadow:0 24px 65px #08080b55}
+.dialog-actions .btn{min-width:140px}
+@media(max-width:950px){.grid-login{grid-template-columns:1fr}.brand-logo{height:55px;max-width:185px}.topbar{padding:15px 20px}}
+@media(max-width:700px){
+  .topbar{gap:11px;min-height:0;padding:13px 15px}
+  .brand{gap:10px}
+  .brand-logo{height:46px;max-width:min(33vw,145px)}
+  .brand-label strong{font-size:.83rem}
+  .brand-label span{font-size:.65rem}
+  .gerentes-badge{order:3;margin-left:auto;font-size:9px;padding:6px 9px}
+  .topbar-actions{justify-content:flex-end;gap:7px;flex:1 1 100%}
+  .topbar .link-simple{flex:1 1 auto}
+  .panel{padding:17px;border-radius:13px}
+  .controls{padding:12px}
+  .kpis{gap:9px}
+  .kpi{padding:13px 12px}
+  .table-wrap{border:none}
+  .table-wrap tr.ranking-vendedor{border-radius:12px}
+  .dialog-actions .btn{min-width:0}
+}
+@media(max-width:380px){.brand-label span{display:none}.topbar .link-simple{font-size:11px}.gerentes-badge{font-size:8px}.kpi strong{font-size:1.22rem}}
+@media(prefers-reduced-motion:reduce){.btn:hover:not(:disabled){transform:none}}
+
+/* Limites reais do layout: não esconder conteúdo que ultrapassa a tela. */
+.topbar>*{min-width:0;max-width:100%}
+.brand-label{overflow-wrap:anywhere}
+.link-simple:active,.btn:active:not(:disabled){background:var(--panel-soft)}
+.btn-primary:active:not(:disabled){background:var(--red-strong)}
+.btn:disabled{box-shadow:none;transform:none}
+.field,.info-head>*,.section-title>*{min-width:0}
+.section-title{flex-wrap:wrap}
+.btn,.status,.small,td,th{overflow-wrap:anywhere}
+.table-wrap table{min-width:0;table-layout:fixed}
+.toggle input{padding:0}
+textarea{resize:vertical}
+@media(min-width:701px) and (max-width:1100px){.topbar{flex-wrap:wrap}.topbar-actions{margin-left:auto}.brand{flex:1 1 100%}}
+@media(max-width:700px){.table-wrap table{table-layout:auto}.brand{width:100%}.topbar-actions{width:100%}.gerentes-badge{white-space:normal;text-align:center}.section-title{align-items:flex-start}.info-head>.btn{width:100%}}
+/* Texto de destaque legível no tema escuro, sem clarear os botões vermelhos. */
+html.dark-mode .kpi strong,html.dark-mode .chip,html.dark-mode .tab[aria-selected=true],html.dark-mode .gerentes-eyebrow{color:#ffabb2}

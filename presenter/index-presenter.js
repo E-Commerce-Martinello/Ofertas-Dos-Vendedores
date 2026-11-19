@@ -9,6 +9,9 @@ const IndexPresenter = {
     pararSyncOfertas: null,
     _rankingSolicitado: '',
     _aparenciaOuvindo: false,
+    _selecaoManual: false,
+    _destaqueAnterior: undefined,
+    _avisosHoje: new Set(),
 
     async init() {
         Storage.verificarQuota();
@@ -93,7 +96,15 @@ const IndexPresenter = {
         this.ofertas = Array.isArray(ofertas) ? ofertas : [];
         const ativas = this._ativas();
         const atual = ativas.find(o => String(o.id) === String(this.ofertaAtual?.id));
-        this.ofertaAtual = atual || ativas[0] || null;
+        if(!atual)this._selecaoManual=false;
+        // A escolha manual só é interrompida pela entrada de um NOVO destaque.
+        // Atualizações normais do Firebase/ranking não mudam a escolha do vendedor.
+        const destaqueVigente=PortalPreferencias.destaque(ativas,getHorarioBrasilia());
+        const destaqueId=destaqueVigente?String(destaqueVigente.id):'';
+        if(this._destaqueAnterior!==undefined && destaqueId && destaqueId!==this._destaqueAnterior)
+            this._selecaoManual=false;
+        this._destaqueAnterior=destaqueId;
+        this.ofertaAtual = PortalPreferencias.inicial(ativas,RankingOfertas.liderAtivas(ativas),atual,this._selecaoManual,getHorarioBrasilia());
         this._renderCatalogo(ativas);
         this._renderOferta(this.ofertaAtual);
         this._atualizarRanking(ativas);
@@ -107,7 +118,10 @@ const IndexPresenter = {
         RankingOfertas.carregar(ativas).then(() => {
             // Nunca aplicar resultado de um conjunto desatualizado.
             if (this._rankingSolicitado !== ids) return;
-            this._renderCatalogo(this._ativas());
+            const atuais=this._ativas();
+            this.ofertaAtual=PortalPreferencias.inicial(atuais,RankingOfertas.liderAtivas(atuais),this.ofertaAtual,this._selecaoManual||this.enviando,getHorarioBrasilia());
+            this._renderCatalogo(atuais);
+            this._renderOferta(this.ofertaAtual);
         }).catch(() => {});
     },
 
@@ -118,15 +132,7 @@ const IndexPresenter = {
         const painel=document.getElementById('destaquesOfertas');
         if(!secao||!grid||!painel)return;
         const lider=RankingOfertas.liderAtivas(ativas);
-        const ehDestaque=o=>{
-            if(o.destaqueDia!==true)return false;
-            const agora=getHorarioBrasilia();
-            const ini=o.destaqueInicio?new Date(o.destaqueInicio):new Date(o.dataInicio);
-            const fim=o.destaqueFim?new Date(o.destaqueFim):new Date(o.dataFim);
-            return Number.isFinite(+ini)&&Number.isFinite(+fim)&&agora>=ini&&agora<=fim;
-        };
-        const escolhida=[...ativas].filter(ehDestaque)
-            .sort((a,b)=>String(b.destaqueInicio||b.dataInicio||'').localeCompare(String(a.destaqueInicio||a.dataInicio||'')))[0];
+        const escolhida=PortalPreferencias.destaque(ativas,getHorarioBrasilia());
         const cards=[];
         const mais=ativas.find(o=>String(o.id)===lider);
         if(mais)cards.push({o:mais,selo:'★ MAIS ACIONADA'});
@@ -135,7 +141,7 @@ const IndexPresenter = {
         if(escolhida && mais && String(escolhida.id)===String(mais.id))cards[0].selo='★ MAIS ACIONADA · DESTAQUE DO DIA';
         const ids=new Set(cards.map(c=>String(c.o.id)));
         secao.hidden=ativas.length<2 && !cards.length;
-        total.textContent=`${ativas.length} oferta${ativas.length===1?'':'s'} disponível${ativas.length===1?'':'is'}`;
+        total.textContent=`${ativas.length} oferta${ativas.length===1?'':'s'} ${ativas.length===1?'disponível':'disponíveis'}`;
         painel.replaceChildren();grid.replaceChildren();
         const montar=(oferta,selo,classe)=>{
             const btn=document.createElement('button');btn.type='button';btn.className=classe;
@@ -157,10 +163,13 @@ const IndexPresenter = {
     selecionarOferta(id) {
         const oferta = this._ativas().find(o => String(o.id) === String(id));
         if (!oferta) return;
+        this._selecaoManual = true;
         this.ofertaAtual = oferta;
         this._renderCatalogo(this._ativas());
         this._renderOferta(oferta);
-        document.getElementById('btnEnviar')?.focus({ preventScroll: true });
+        const botao=document.getElementById('btnEnviar');
+        botao?.focus({preventScroll:true});
+        botao?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
     },
 
     _renderOferta(oferta) {
@@ -193,7 +202,11 @@ const IndexPresenter = {
         document.getElementById('infoHoraBrasilia').textContent = formatarBrasilia(agora);
         const atual = this._ativas(agora);
         const ids = atual.map(o => String(o.id)).join(',');
-        if (ids !== this._assinatura || (this.ofertaAtual && !isOfertaAtiva(this.ofertaAtual, agora))) {
+        // Detectar também destaques que iniciam por agendamento sem gravar no Firebase.
+        const destaqueAgora=PortalPreferencias.destaque(atual,agora);
+        const mudouDestaque=this._destaqueAnterior!==undefined
+            && String(destaqueAgora?.id||'')!==this._destaqueAnterior;
+        if (ids !== this._assinatura || mudouDestaque || (this.ofertaAtual && !isOfertaAtiva(this.ofertaAtual, agora))) {
             this._assinatura = ids;
             this._aplicarOfertas(this.ofertas);
             return;
@@ -226,6 +239,46 @@ const IndexPresenter = {
         input.style.borderColor = !input.value ? '' : valido ? 'var(--whatsapp-color)' : '#dc3545';
     },
 
+    async _avisarNaoVendedor(cod) {
+        const hoje=PortalPreferencias.dia();
+        const chave='mart:nao-vendedor:'+location.pathname+':'+cod;
+        const memoria=chave+':'+hoje;
+        if(this._avisosHoje.has(memoria))return;
+        let armazenamento;try{armazenamento=window.localStorage;}catch(_){armazenamento=null;}
+        if(!PortalPreferencias.deveAvisar(armazenamento,chave,hoje))return;
+        const card=document.getElementById('avisoNaoVendedor');
+        if(!card)return;
+        this._avisosHoje.add(memoria);
+        card.hidden=false;
+        const continuar=document.getElementById('avisoNaoVendedorContinuar');
+        continuar?.focus({preventScroll:true});
+        // O aviso é mostrado ANTES de tentar abrir a tela de compartilhamento.
+        // Continua após confirmação/fechamento ou, automaticamente, após 20 segundos.
+        return await new Promise(resolve=>{
+            this._avisoResolucao=resolve;
+            clearInterval(this._avisoTimer);
+            let restante=20;
+            const contador=document.getElementById('avisoNaoVendedorContador');
+            const atualizar=()=>{if(contador)contador.textContent=String(restante);};
+            atualizar();
+            this._avisoTimer=setInterval(()=>{
+                if(document.hidden)return;
+                restante--;
+                atualizar();
+                if(restante<=0)this.fecharAvisoNaoVendedor('tempo');
+            },1000);
+        });
+    },
+    fecharAvisoNaoVendedor(motivo='continuar'){
+        clearInterval(this._avisoTimer);
+        this._avisoTimer=null;
+        const card=document.getElementById('avisoNaoVendedor');
+        if(card)card.hidden=true;
+        const resolver=this._avisoResolucao;
+        this._avisoResolucao=null;
+        if(resolver)resolver(motivo);
+    },
+
     async enviar() {
         if (this.enviando) return;
         const oferta = this.ofertaAtual;
@@ -245,17 +298,15 @@ const IndexPresenter = {
             // A classificação vem da planilha do ambiente, por consulta pública sem dados pessoais.
             // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
             const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
-            if (vendedorAtivo !== true) {
-                UI.erro(vendedorAtivo === false
-                    ? 'Matrícula de não vendedor. A oferta será gerada com o link padrão da Martinello.'
-                    : 'Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
-            }
+            // O aviso será exibido depois de preparar a mensagem, imediatamente antes do compartilhamento.
+            if(vendedorAtivo!==true&&vendedorAtivo!==false)UI.erro('Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
             if (vendedorAtivo === true) {
                 const continuar = await TelefonePortal.garantir(cod);
                 if (!continuar) return;
             }
             Storage.salvarUltimaMatricula(cod);
-            await CampanhasPortal.carregar().catch(()=>'');
+            // Não compartilhar com campanha indefinida ou configuração remota indisponível.
+            await CampanhasPortal.carregar();
             const link = LinkTrack.urlCompartilhavel(oferta,cod,vendedorAtivo===true);
             const msg = formatarTexto(oferta.textoOferta, link, cod);
             // Não atribuir acesso de não vendedor aos rankings de vendedores ativos.
@@ -265,10 +316,22 @@ const IndexPresenter = {
                 await API.rastrear(cod, getBrowserName());
                 await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
             }
+            if(vendedorAtivo===false) {
+                const resultadoAviso=await this._avisarNaoVendedor(cod);
+                if(resultadoAviso==='tempo') {
+                    // O Web Share precisa de um gesto real do usuário. Não tente abrir
+                    // automaticamente uma janela após 20 s de espera.
+                    UI.ok('Aviso fechado. Toque novamente em GERAR E COMPARTILHAR para enviar a oferta.');
+                    return;
+                }
+            }
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);
-            UI.erro('Não foi possível preparar a mensagem. Tente novamente.');
+            const mensagem=String(e?.message||'');
+            if(/campanha|rastreio|URL HTTPS oficial|destino precisa|API pública/i.test(mensagem))
+                UI.erro(mensagem);
+            else UI.erro('Não foi possível preparar a mensagem. Tente novamente.');
         } finally {
             this.enviando = false;
             this._renderOferta(this.ofertaAtual);
