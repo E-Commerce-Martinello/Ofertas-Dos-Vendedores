@@ -5,5 +5,5 @@ test('HTML usa arquivos existentes, IDs únicos e dois campos editáveis de tele
  const html=fs.readFileSync('admin.html','utf8'),modal=html.split('id="modalEditarVendedor"')[1].split('id="whatsappModal"')[0];assert.equal([...modal.matchAll(/type="tel"/g)].length,2);assert.ok(!html.includes('id="editarTelefoneVendedor"'));
 });
 test('destinos de ambiente permanecem idênticos à base sincronizada',()=>{
- const {execFileSync}=require('child_process');assert.equal(fs.readFileSync('shared/config.js','utf8'),execFileSync('git',['show','43a0b2693ebb5d82b1608f5f57da3f8e031307f2:shared/config.js'],{encoding:'utf8'}));
+ const {execFileSync}=require('child_process');assert.equal(fs.readFileSync('shared/config.js','utf8'),execFileSync('git',['show','78ad21664822f1495d66d2e9137b4bfe09a08c10:shared/config.js'],{encoding:'utf8'}));
 });
