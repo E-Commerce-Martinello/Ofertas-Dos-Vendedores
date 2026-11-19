@@ -13,6 +13,7 @@ const IndexPresenter = {
     _selecaoManual: false,
     _destaqueAnterior: undefined,
     _avisosHoje: new Set(),
+    _compartilhamento:null,
 
     async init() {
         Storage.verificarQuota();
@@ -106,6 +107,7 @@ const IndexPresenter = {
             this._selecaoManual=false;
         this._destaqueAnterior=destaqueId;
         this.ofertaAtual = PortalPreferencias.inicial(ativas,RankingOfertas.liderAtivas(ativas),atual,this._selecaoManual,getHorarioBrasilia());
+        if(this._compartilhamento && !this._preparoValido(this.ofertaAtual,this._compartilhamento.matricula))this._compartilhamento=null;
         this._renderCatalogo(ativas);
         this._renderOferta(this.ofertaAtual);
         this._atualizarRanking(ativas);
@@ -167,6 +169,8 @@ const IndexPresenter = {
         if (!oferta) return;
         this._selecaoManual = true;
         this.ofertaAtual = oferta;
+        this._compartilhamento=null;
+        this._fecharAlternativo();
         this._renderCatalogo(this._ativas());
         this._renderOferta(oferta);
         const botao=document.getElementById('btnEnviar');
@@ -186,7 +190,10 @@ const IndexPresenter = {
         document.getElementById('fotoProduto').src = oferta?.urlImagem || cfg.imagem;
         document.getElementById('cod').disabled = !oferta;
         btn.disabled = !oferta || this.enviando;
-        btn.querySelector('.btn-text').textContent = oferta ? 'GERAR E COMPARTILHAR ESTA OFERTA' : 'EM BREVE';
+        const codigo=document.getElementById('cod')?.value?.trim()||'';
+        btn.querySelector('.btn-text').textContent = oferta
+            ? this._preparoValido(oferta,codigo) ? 'COMPARTILHAR OFERTA COM IMAGEM' : 'PREPARAR OFERTA PARA COMPARTILHAR'
+            : 'EM BREVE';
         info.textContent = oferta ? titulo : 'EM BREVE';
         status.textContent = oferta ? '✅ OFERTA DISPONÍVEL' : '⏸️ SEM OFERTAS';
         status.className = `status-text ${oferta ? 'status-ativo' : 'status-embreve'}`;
@@ -236,7 +243,11 @@ const IndexPresenter = {
     },
 
     validarMatriculaInput(input) {
+        const anterior=input.value;
         input.value = input.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 5);
+        if(this._compartilhamento && this._compartilhamento.matricula!==input.value){
+            this._compartilhamento=null;this._fecharAlternativo();this._renderOferta(this.ofertaAtual);
+        }
         this._atualizarBordaMatricula(input);
     },
     _atualizarBordaMatricula(input) {
@@ -284,68 +295,142 @@ const IndexPresenter = {
         if(resolver)resolver(motivo);
     },
 
+    _preparoValido(oferta,matricula){
+        const p=this._compartilhamento;
+        return !!p&&!!oferta&&p.matricula===String(matricula||'')
+            &&p.ofertaId===String(oferta.id)&&p.textoOferta===String(oferta.textoOferta||'')
+            &&p.urlImagem===String(oferta.urlImagem||'')
+            &&p.linkProduto===String(oferta.linkProduto||'')
+            &&p.campanha===String(oferta.campanha||'')
+            &&Date.now()-p.criadoEm<5*60*1000;
+    },
+
+    _fecharAlternativo(){
+        const card=document.getElementById('compartilhamentoAlternativo');
+        if(card)card.hidden=true;
+    },
+    _abrirAlternativo(){
+        const card=document.getElementById('compartilhamentoAlternativo');
+        if(card){card.hidden=false;card.scrollIntoView({behavior:'smooth',block:'center'});}
+    },
+    async copiarTextoAlternativo(){
+        const txt=this._compartilhamento?.preparado?.texto;
+        if(!txt)return;
+        try{
+            if(!navigator.clipboard?.writeText)throw Error('SEM_CLIPBOARD');
+            await navigator.clipboard.writeText(txt);
+            UI.ok('Texto copiado! Cole como legenda da imagem no WhatsApp.');
+        }catch(_){UI.erro('Seu navegador não permitiu copiar automaticamente. Use outro navegador ou o compartilhamento nativo.');}
+    },
+    baixarImagemAlternativa(){
+        const arquivo=this._compartilhamento?.preparado?.file;
+        if(!arquivo)return;
+        const url=URL.createObjectURL(arquivo),link=document.createElement('a');
+        link.href=url;link.download=arquivo.name||'oferta.png';
+        document.body.appendChild(link);link.click();link.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),30000);
+        UI.ok('Imagem preparada. Anexe-a no WhatsApp e cole o texto.');
+    },
+    abrirWhatsAppAlternativo(){
+        if(!this._compartilhamento)return;
+        // O WhatsApp web não permite anexar arquivo pelo link wa.me.
+        // Exigir ação explícita: imagem baixada e legenda copiada manualmente.
+        window.open('https://wa.me/','_blank','noopener');
+    },
+
     async enviar() {
-        if (this.enviando) return;
-        const oferta = this.ofertaAtual;
-        if (!oferta || !isOfertaAtiva(oferta, getHorarioBrasilia())) {
+        if(this.enviando)return;
+        const oferta=this.ofertaAtual;
+        if(!oferta||!isOfertaAtiva(oferta,getHorarioBrasilia())){
             UI.erro('Esta oferta não está mais disponível. Selecione outra.');
-            this._aplicarOfertas(this.ofertas);
+            this._aplicarOfertas(this.ofertas);return;
+        }
+        const cod=document.getElementById('cod').value.trim();
+        if(!Validators.matricula(cod)){UI.erro('Digite uma matrícula válida (3 a 5 números).');return;}
+        const btn=document.getElementById('btnEnviar');
+        const titulo=btn.querySelector('.btn-text');
+
+        // SEGUNDO toque: chamar navigator.share ainda na ativação original.
+        // Não efetuar nenhum await, consulta Google, fetch de imagem ou analytics antes!
+        if(this._preparoValido(oferta,cod)){
+            try{
+                const tarefa=API.compartilharPreparado(this._compartilhamento.preparado);
+                this._fecharAlternativo();
+                // Indicativo de tentativa. Não comprova envio pelo WhatsApp.
+                if(this._compartilhamento.ativo){
+                    AnalyticsService.registrarInicio(oferta,cod).catch(e=>console.warn('Evento não enviado:',e));
+                    API.rastrear(cod,getBrowserName()).catch(()=>{});
+                }
+                this.enviando=true;btn.disabled=true;titulo.textContent='ABRINDO COMPARTILHAMENTO...';
+                await tarefa;
+            }catch(e){
+                if(e?.name==='AbortError')return;
+                console.warn('Compartilhamento nativo indisponível:',String(e?.name||'erro'));
+                if(String(e?.message||'').includes('COMPARTILHAMENTO_IMAGEM_NAO_SUPORTADO')
+                    ||e?.name==='NotAllowedError'||e?.name==='TypeError'){
+                    this._abrirAlternativo();
+                    UI.erro('Este navegador não abriu a imagem automaticamente. Use as opções para salvar a imagem, copiar o texto e anexar no WhatsApp.');
+                }else UI.erro('Não foi possível abrir o compartilhamento com imagem. Tente novamente ou use as opções alternativas.');
+            }finally{
+                this.enviando=false;
+                this._renderOferta(this.ofertaAtual);
+            }
             return;
         }
-        const cod = document.getElementById('cod').value.trim();
-        if (!Validators.matricula(cod)) { UI.erro('Digite uma matrícula válida (3 a 5 números).'); return; }
-        const btn = document.getElementById('btnEnviar');
-        const texto = btn.querySelector('.btn-text');
-        this.enviando = true;
-        btn.disabled = true;
-        texto.textContent = 'PREPARANDO...';
-        try {
-            // A classificação vem da planilha do ambiente, por consulta pública sem dados pessoais.
-            // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
-            const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
-            // O aviso será exibido depois de preparar a mensagem, imediatamente antes do compartilhamento.
+
+        this._compartilhamento=null;
+        this._fecharAlternativo();
+        this.enviando=true;btn.disabled=true;titulo.textContent='PREPARANDO IMAGEM E LINK...';
+        try{
+            // Nunca afirmar que uma matrícula está ativa sem confirmação do coletor.
+            const vendedorAtivo=await TelefonePortal.consultarMatricula(cod);
             if(vendedorAtivo!==true&&vendedorAtivo!==false){
-                UI.erro('A matrícula não pôde ser confirmada pelo Apps Script. Confira a conexão e tente novamente. Nenhum link sem atribuição foi gerado.');
-                return;
+                UI.erro('Não foi possível confirmar a matrícula pelo Apps Script. Confira a conexão e tente novamente.');return;
             }
-            if (vendedorAtivo === true) {
-                const continuar = await TelefonePortal.garantir(cod);
-                if (!continuar) return;
+            if(vendedorAtivo===true){
+                const continuar=await TelefonePortal.garantir(cod);
+                if(!continuar)return;
             }
             Storage.salvarUltimaMatricula(cod);
-            // Não compartilhar com campanha indefinida ou configuração remota indisponível.
             await CampanhasPortal.carregar();
-            const link = LinkTrack.urlCompartilhavel(oferta,cod,vendedorAtivo===true);
-            const msg = formatarTexto(oferta.textoOferta, link, cod);
-            if(msg.includes('\uFFFD')){
-                UI.erro('Aviso: esta oferta contém emojis corrompidos (�). Peça ao administrador para corrigir o texto original.');
+            const link=LinkTrack.urlCompartilhavel(oferta,cod,vendedorAtivo===true);
+            const texto=String(oferta.textoOferta||'');
+            if(texto.includes('\uFFFD')){
+                UI.erro('Esta oferta já foi cadastrada com emojis corrompidos (�). Peça ao administrador para corrigir os caracteres no texto original. Nenhuma mensagem danificada foi enviada.');
+                return;
             }
-            // Não atribuir acesso de não vendedor aos rankings de vendedores ativos.
-            if(vendedorAtivo===true){
-                const registro = AnalyticsService.registrarInicio(oferta, cod)
-                    .catch(e => { console.warn('Telemetria: erro inesperado:', e); return false; });
-                await API.rastrear(cod, getBrowserName());
-                await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
+            const msg=formatarTexto(texto,link,cod);
+            // Uma imagem omitida no cache não pode virar compartilhamento só de texto.
+            if(!oferta.urlImagem){
+                UI.erro('A imagem da oferta não foi carregada. Verifique a conexão com o Firebase e atualize a página antes de tentar novamente.');return;
             }
-            if(vendedorAtivo===false) {
-                const resultadoAviso=await this._avisarNaoVendedor(cod);
-                if(resultadoAviso==='tempo') {
-                    // O Web Share precisa de um gesto real do usuário. Não tente abrir
-                    // automaticamente uma janela após 20 s de espera.
-                    UI.ok('Aviso fechado. Toque novamente em GERAR E COMPARTILHAR para enviar a oferta.');
-                    return;
+            const preparado=await API.prepararCompartilhamento(msg,oferta.urlImagem);
+            if(this.ofertaAtual?.id!==oferta.id||document.getElementById('cod')?.value.trim()!==cod){
+                UI.erro('A oferta ou matrícula mudou durante a preparação. Tente novamente.');return;
+            }
+            if(vendedorAtivo===false){
+                const resultado=await this._avisarNaoVendedor(cod);
+                if(resultado==='tempo'){
+                    UI.ok('Aviso fechado. Confira a oferta e toque novamente para compartilhar.');return;
                 }
             }
-            await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
-        } catch (e) {
-            console.error('Falha na preparação do compartilhamento:', e);
-            const mensagem=String(e?.message||'');
-            if(/campanha|rastreio|URL HTTPS oficial|destino precisa|API pública/i.test(mensagem))
-                UI.erro(mensagem);
-            else UI.erro('Não foi possível preparar a mensagem. Tente novamente.');
-        } finally {
-            this.enviando = false;
-            this._renderOferta(this.ofertaAtual);
+            this._compartilhamento={
+                matricula:cod,ofertaId:String(oferta.id),
+                textoOferta:texto,urlImagem:String(oferta.urlImagem),
+                linkProduto:String(oferta.linkProduto||''),campanha:String(oferta.campanha||''),
+                criadoEm:Date.now(),preparado,ativo:vendedorAtivo===true
+            };
+            UI.ok('Imagem e texto preparados. Toque em COMPARTILHAR OFERTA COM IMAGEM para abrir o WhatsApp.');
+        }catch(e){
+            console.error('Falha ao preparar compartilhamento:',e);
+            const code=String(e?.message||'');
+            if(code.startsWith('IMAGEM_OFERTA_'))
+                UI.erro('Não foi possível carregar a imagem da oferta. Confira a conexão ou peça ao administrador para revisar o banner.');
+            else if(/campanha|rastreio|URL HTTPS oficial|destino precisa|API pública/i.test(code))
+                UI.erro(code);
+            else UI.erro('Não foi possível preparar a oferta. Confira sua conexão e tente novamente.');
+        }finally{
+            this.enviando=false;this._renderOferta(this.ofertaAtual);
         }
     }
 };
