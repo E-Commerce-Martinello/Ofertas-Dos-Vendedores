@@ -16,7 +16,7 @@ function adminSimulado(){
     skuOferta:{value:''},rascunhoOferta:{checked:false},destaqueDiaOferta:{checked:false},
     destaqueInicioOferta:{value:''},destaqueFimOferta:{value:''},fileInput:{files:[]}
   };
-  const doc={getElementById:id=>valores[id]};
+  const doc={getElementById:id=>valores[id],addEventListener(){}};
   const v=new Function('CONFIG',fonte('model/validators.js')+';return Validators;')({maxImageSize:5000000,imagensPermitidas:['image/jpeg']});
   const ui={erro:msg=>erros.push(msg),ok:()=>{}};
   const storage={modificarOferta:async ({oferta})=>{salvos.push(oferta);return {ok:true,ofertas:[oferta]}}};
