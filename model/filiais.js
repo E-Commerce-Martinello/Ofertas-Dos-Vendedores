@@ -2,7 +2,18 @@
 // O identificador de filial permanece num select interno compatível com os apresentadores.
 const FiliaisUI = {
   fonte:{}, campos:new Map(),
-  definir(fonte){this.fonte=fonte||{};this.ativarBuscas();},
+  definir(fonte){
+    this.fonte=fonte||{};this.nomes=new Map();
+    const grupos=new Map();
+    for(const id of Object.keys(this.fonte).sort((a,b)=>Number(a)-Number(b))){
+      const cidade=this.municipio(id),chave=this.normalizar(cidade);
+      if(!cidade){this.nomes.set(id,`${id} • Município não cadastrado`);continue;}
+      if(!grupos.has(chave))grupos.set(chave,[]);
+      grupos.get(chave).push({id,cidade});
+    }
+    for(const lista of grupos.values())lista.forEach(({id,cidade},i)=>this.nomes.set(id,`${id} • ${cidade}${lista.length>1?' '+this.romano(i+1):''}`));
+    this.ativarBuscas();
+  },
   normalizar(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();},
   // Exibe apenas o nome do município. A fonte preferida é a coluna C
   // "municipio" da aba Filiais. A coluna B "localidade" pode ter bairros,
@@ -11,10 +22,15 @@ const FiliaisUI = {
     let bruto=String(this.fonte[String(codigo)]||'').trim();
     if(!bruto)return '';
     bruto=bruto.replace(/\s+/g,' ').trim();
-    // Limpa prefixos de unidade, códigos e campos de localização.
-    bruto=bruto.replace(/^(?:filial|loja|unidade)\s*#?\d+\s*(?:[-–—:•]\s*)?/i,'')
-               .replace(/^\d{1,6}\s*[-–—:•]\s*/,'')
-               .trim();
+    // Um campo pode já conter o código ou tê-lo sido prefixado mais de uma vez
+    // por importações antigas. Remova TODOS os prefixos repetidos, não só o primeiro.
+    // Ex.: "118 • 118 • Alto Araguaia" -> "Alto Araguaia".
+    for (let i=0;i<5;i++){
+      const anterior=bruto;
+      bruto=bruto.replace(/^(?:(?:filial|loja|unidade)\s*#?\s*)?\d{1,6}\s*(?:[-–—:•·.]\s*)/i,'')
+                 .trim();
+      if (bruto===anterior)break;
+    }
     // Mantém apenas o município antes de divisores de bairro/loja/setor.
     bruto=bruto.split(/\s*(?:[-–—|•;\/])\s*/)[0].trim();
     bruto=bruto.replace(/\s*\([^)]*\)\s*$/,'').trim();
@@ -53,56 +69,12 @@ const FiliaisUI = {
     const id=String(codigo||'').trim(),cidade=this.municipio(id);
     if(!id)return 'Não identificado';
     if(!cidade)return `${id} • Município não cadastrado`;
-    const pares=Object.keys(this.fonte).filter(k=>this.normalizar(this.municipio(k))===this.normalizar(cidade))
-      .sort((a,b)=>Number(a)-Number(b));
-    const pos=pares.indexOf(id);
-    return `${id} • ${cidade}${pares.length>1 && pos>=0?' '+this.romano(pos+1):''}`;
-  },
-  _lista(select,input){
-    const id='listaBuscaFilial'+select.id;
-    let lista=document.getElementById(id);
-    if(!lista){lista=document.createElement('datalist');lista.id=id;input.insertAdjacentElement('afterend',lista);}
-    input.setAttribute('list',id);
-    const valores=[...select.options];
-    lista.replaceChildren(...valores.map(o=>new Option(o.textContent.trim(),o.textContent.trim())));
-    const selecionada=valores.find(o=>o.value===select.value);
-    if(document.activeElement!==input || !input.value.trim()) input.value=selecionada?.value ? selecionada.textContent.trim() : '';
+    return this.nomes?.get(id)||`${id} • ${cidade}`;
   },
   ativarBuscas(){
-    document.querySelectorAll('input[id^="busca"]').forEach(input=>{
-      const id=input.id.slice(5),select=document.getElementById(id);
-      if(!select||select.tagName!=='SELECT')return;
-      select.classList.add('filial-select-interno');
-      input.classList.add('filial-combo');
-      input.placeholder='Todas as filiais — digite código ou município';
-      if(!this.campos.has(id)){
-        const atualizar=()=>this._lista(select,input);
-        const observer=new MutationObserver(atualizar);
-        observer.observe(select,{childList:true,subtree:true,characterData:true});
-        select.addEventListener('change',()=>{
-          if(document.activeElement===input)return;
-          const option=[...select.options].find(o=>o.value===select.value);
-          input.value=option?.value ? option.textContent.trim() : '';
-        });
-        this.campos.set(id,{observer});
-      }
-      this._lista(select,input);
-    });
+    if(typeof AdminComponents==='undefined')return;
+    document.querySelectorAll('input[id^="busca"]').forEach(input=>{const select=document.getElementById(input.id.slice(5));if(select?.tagName==='SELECT')AdminComponents.combo(select);});
   },
-  buscar(id){
-    const input=document.getElementById('busca'+id),select=document.getElementById(id);
-    if(!input||!select)return;
-    const termo=this.normalizar(input.value);
-    const match=[...select.options].find(o=>this.normalizar(o.textContent)===termo || (termo && this.normalizar(o.value)===termo));
-    // Enquanto digita, as sugestões filtram localmente; somente a escolha exata ativa o filtro.
-    if(!termo || match){
-      select.value=termo ? match.value : '';
-      select.dispatchEvent(new Event('change',{bubbles:true}));
-    }
-  },
-  limparCache(id){
-    const input=document.getElementById('busca'+id);
-    if(input)input.value='';
-    // As opções serão reconstruídas no datalist quando o select for repopulado.
-  }
+  buscar(){},
+  limparCache(){if(typeof AdminComponents!=='undefined')AdminComponents.atualizarCombos();}
 };
