@@ -91,3 +91,30 @@ test('HTML contém verificador de atualização automática nos portais, sem apa
   assert.doesNotMatch(src,/localStorage\.clear\(\)/);
   assert.doesNotThrow(()=>new vm.Script(src));
 });
+
+test('coletor de versão antiga não exige número já possivelmente enviado',async()=>{
+  const local={getItem:()=>null,setItem(){}},win={};let solicitacoes=0;
+  const doc={createElement:()=>({remove(){}}),head:{appendChild(el){
+    const requestId=new URL(el.src).searchParams.get('requestId');
+    queueMicrotask(()=>win.MartinelloTelefoneReceber({requestId,disponivel:true,validado:false}));
+  }}};
+  const phone=new Function('window','document','CONFIG','localStorage','setTimeout','clearTimeout',
+    source('model/telefone-portal.js')+';return TelefonePortal;')(win,doc,
+    {environment:'OFICIAL',portalEventsApiUrl:'https://script.google.com/macros/s/EXEMPLO/exec'},local,setTimeout,clearTimeout);
+  phone.solicitar=()=>{solicitacoes++;return Promise.resolve(false)};
+  assert.equal(await phone.garantir('19000'),true);
+  assert.equal(solicitacoes,0);
+});
+test('quando coletor atualizado confirma nenhum pedido, o cadastro continua disponível',async()=>{
+  const local={getItem:()=>null,setItem(){}},win={};let solicitacoes=0;
+  const doc={createElement:()=>({remove(){}}),head:{appendChild(el){
+    const requestId=new URL(el.src).searchParams.get('requestId');
+    queueMicrotask(()=>win.MartinelloTelefoneReceber({requestId,disponivel:true,validado:false,solicitado:false}));
+  }}};
+  const phone=new Function('window','document','CONFIG','localStorage','setTimeout','clearTimeout',
+    source('model/telefone-portal.js')+';return TelefonePortal;')(win,doc,
+    {environment:'OFICIAL',portalEventsApiUrl:'https://script.google.com/macros/s/EXEMPLO/exec'},local,setTimeout,clearTimeout);
+  phone.solicitar=()=>{solicitacoes++;return Promise.resolve(false)};
+  assert.equal(await phone.garantir('19000'),false);
+  assert.equal(solicitacoes,1);
+});
