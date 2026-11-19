@@ -19,52 +19,48 @@ const API = {
         } catch { /* rastreio é best-effort */ }
     },
 
-    // Preparação pode esperar rede e decodificação, SEM consumir o gesto do usuário.
-    // Deve ser chamada antes de mostrar o botão final COMPARTILHAR.
     async prepararCompartilhamento(texto, imagemUrl) {
         const src=String(imagemUrl||'').trim();
         if(!src)throw new Error('IMAGEM_OFERTA_AUSENTE');
         let blob;
-        if(/^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(src)) {
-            const pos=src.indexOf(',');
-            const mime=src.slice(5,src.indexOf(';')).replace('jpg','jpeg');
-            let bytes;
-            try{bytes=atob(src.slice(pos+1));}
+        const match=/^data:(image\/(?:png|jpeg|jpg|gif|webp));base64,/i.exec(src);
+        if(match){
+            const mime=match[1].toLowerCase().replace('jpg','jpeg');
+            let decodificado;
+            try { decodificado=atob(src.slice(match[0].length)); }
             catch(_){throw new Error('IMAGEM_OFERTA_CORROMPIDA');}
-            const bin=new Uint8Array(bytes.length);
-            for(let i=0;i<bytes.length;i++)bin[i]=bytes.charCodeAt(i);
-            blob=new Blob([bin],{type:mime});
-        } else if(/^https:\/\//i.test(src)||/^img\//.test(src)) {
-            const response=await fetch(src,{cache:'no-store'});
-            if(!response.ok)throw new Error('IMAGEM_OFERTA_INDISPONIVEL');
-            blob=await response.blob();
-        } else {
+            const bytes=new Uint8Array(decodificado.length);
+            for(let i=0;i<decodificado.length;i++)bytes[i]=decodificado.charCodeAt(i);
+            blob=new Blob([bytes],{type:mime});
+        }else if(/^https:\/\//i.test(src)||/^img\//i.test(src)){
+            const r=await fetch(src,{cache:'no-store'});
+            if(!r.ok)throw new Error('IMAGEM_OFERTA_INDISPONIVEL');
+            blob=await r.blob();
+        }else{
             throw new Error('IMAGEM_OFERTA_INVALIDA');
         }
-        if(!blob||!blob.size||!/^image\/(png|jpeg|gif|webp)$/i.test(blob.type))
+        if(!blob.size || !/^image\/(?:jpeg|png|gif|webp)$/i.test(blob.type))
             throw new Error('IMAGEM_OFERTA_INVALIDA');
-        const ext=blob.type==='image/jpeg'?'jpg':blob.type.split('/')[1];
-        const file=new File([blob],'oferta.'+ext,{type:blob.type});
-        return {texto:String(texto||''),file,imagemUrl:src};
+        const extensao=blob.type==='image/jpeg'?'jpg':blob.type.slice(6);
+        const arquivo=new File([blob],'oferta.'+extensao,{type:blob.type});
+        return {texto:String(texto||''),file:arquivo};
     },
 
-    // Chamar DIRETAMENTE do segundo toque no botão. É essencial não fazer nenhum
-    // await antes de navigator.share: o Android perde a ativação do usuário.
     compartilharPreparado(preparado) {
-        const file=preparado?.file;
-        if(!file)throw new Error('IMAGEM_OFERTA_AUSENTE');
-        if(typeof navigator.share!=='function'||typeof navigator.canShare!=='function'
-           ||!navigator.canShare({files:[file]}))
+        if(!preparado?.file)throw new Error('IMAGEM_OFERTA_AUSENTE');
+        if(typeof navigator.share!=='function' || typeof navigator.canShare!=='function' ||
+           !navigator.canShare({files:[preparado.file]})){
             throw new Error('COMPARTILHAMENTO_IMAGEM_NAO_SUPORTADO');
-        // Promise criada sincronamente no mesmo evento de clique.
-        return navigator.share({files:[file],text:preparado.texto})
+        }
+        // O Android recebe arquivo + texto no MESMO compartilhamento nativo,
+        // chamado diretamente na ativação do botão, sem awaits anteriores.
+        return navigator.share({files:[preparado.file],text:preparado.texto})
             .then(()=>({metodo:'share-com-imagem'}));
     },
 
-    // Compatibilidade para consumidores antigos. O Portal de Vendedores utiliza
-    // o fluxo de dois toques acima para não perder a autorização do Web Share.
+    // Compatibilidade com outros componentes que usam a API antiga.
     async compartilhar(texto,imagemUrl) {
-        const dados=await this.prepararCompartilhamento(texto,imagemUrl);
-        return this.compartilharPreparado(dados);
-    },
+        const preparado=await this.prepararCompartilhamento(texto,imagemUrl);
+        return this.compartilharPreparado(preparado);
+    }
 };

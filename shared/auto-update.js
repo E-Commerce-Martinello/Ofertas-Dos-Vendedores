@@ -5,7 +5,6 @@
   'use strict';
   const page=location.pathname.split('/').pop()||'index.html';
   if(!['index.html','admin.html','gerentes.html'].includes(page))return;
-  const atual=document.documentElement;
   const nome='martinello-build';
   const paginaScripts=dom=>{
     const refs=[...dom.querySelectorAll('script[src],link[rel="stylesheet"][href]')]
@@ -15,14 +14,17 @@
     return JSON.stringify({refs,build});
   };
   const inicial=paginaScripts(document);
-  let verificando=false,avisoPendente=false,ultimo=0;
+  let verificando=false,ultimo=0;
   function podeRecarregar(){
     if(page==='admin.html')return false; // Preserva formulários e alterações abertas.
     if(page==='gerentes.html')
       return document.getElementById('gerentesPainel')?.hidden!==false;
     const p=typeof IndexPresenter==='undefined'?null:IndexPresenter;
-    return !p?.enviando&&!p?._compartilhamento
-      &&document.getElementById('portalTelefoneModal')?.hidden!==false;
+    // Não recarregar durante a abertura do WhatsApp, preenchimento do telefone
+    // ou antes de o vendedor compartilhar a mensagem que já foi preparada.
+    // Depois de um compartilhamento concluído, a atualização volta a ser automática.
+    return !p?.enviando && (!p?._compartilhamento || p._compartilhouAoMenosUmaVez===true)
+      && document.getElementById('portalTelefoneModal')?.hidden!==false;
   }
   function banner(){
     if(document.getElementById('martAtualizacaoAviso'))return;
@@ -53,7 +55,7 @@
       if(!res.ok)return;
       const doc=new DOMParser().parseFromString(await res.text(),'text/html');
       if(paginaScripts(doc)===inicial)return;
-      if(podeRecarregar())atualizar();else{avisoPendente=true;banner();}
+      if(podeRecarregar())atualizar();else banner();
     }catch(e){console.warn('Atualização automática indisponível:',e?.name||'erro');}
     finally{verificando=false;}
   }
@@ -63,8 +65,11 @@
       try{
         const cod=sessionStorage.getItem('martAtualizacaoMatricula');
         if(cod&&document.getElementById('cod')){
-          document.getElementById('cod').value=cod;
+          const input=document.getElementById('cod');
+          input.value=cod;
           sessionStorage.removeItem('martAtualizacaoMatricula');
+          // Atualiza a validação e prepara a imagem/legenda após o reload.
+          input.dispatchEvent(new Event('input',{bubbles:true}));
         }
       }catch(_){}
     }
