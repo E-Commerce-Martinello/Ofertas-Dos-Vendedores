@@ -191,6 +191,8 @@ const IndexPresenter = {
         document.getElementById('cod').disabled = !oferta;
         btn.disabled = !oferta || this.enviando;
         const codigo=document.getElementById('cod')?.value?.trim()||'';
+        const copiar=document.getElementById('btnCopiarLegenda');
+        if(copiar)copiar.hidden=!this._preparoValido(oferta,codigo);
         btn.querySelector('.btn-text').textContent = oferta
             ? this._preparoValido(oferta,codigo) ? 'COMPARTILHAR OFERTA COM IMAGEM' : 'PREPARAR OFERTA PARA COMPARTILHAR'
             : 'EM BREVE';
