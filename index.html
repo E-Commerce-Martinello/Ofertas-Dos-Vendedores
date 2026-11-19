@@ -2,6 +2,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="martinello-build" content="1.6.19-mobile-share-20261119">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal do Vendedor - Martinello</title>
 
@@ -385,7 +387,14 @@
 #avisoNaoVendedor button{touch-action:manipulation}
 #avisoNaoVendedor button:focus-visible{outline:3px solid #236cd0;border-radius:6px}
 body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#e9b65d}
-</style></head>
+</style><style>
+      #compartilhamentoAlternativo[hidden]{display:none!important}
+      #compartilhamentoAlternativo{margin:16px 0;padding:16px;border:2px solid #c72a36;background:#fff8f8;color:#333;border-radius:13px;text-align:left}
+      #compartilhamentoAlternativo .alternativa-acoes{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+      #compartilhamentoAlternativo button{border:0;background:#c72a36;color:white;padding:12px 14px;border-radius:9px;font:700 12px Arial;cursor:pointer}
+      #compartilhamentoAlternativo p{font-size:13px;line-height:1.6;margin:5px 0}
+      body.dark-mode #compartilhamentoAlternativo{background:#393033;color:#fff}
+    </style></head>
 <body>
 
 <header class="header">
@@ -425,6 +434,16 @@ body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#
                 maxlength="5"
                 autocomplete="off">
         </div>
+
+<section id="compartilhamentoAlternativo" hidden role="region" aria-label="Compartilhar oferta manualmente">
+        <strong>Seu navegador não conseguiu anexar a imagem automaticamente.</strong>
+        <p>Use estas opções: salve a imagem, copie o texto e anexe a imagem no WhatsApp. Cole o texto na legenda antes de enviar.</p>
+        <div class="alternativa-acoes">
+          <button type="button" onclick="IndexPresenter.baixarImagemAlternativa()">1. BAIXAR IMAGEM</button>
+          <button type="button" onclick="IndexPresenter.copiarTextoAlternativo()">2. COPIAR TEXTO</button>
+          <button type="button" onclick="IndexPresenter.abrirWhatsAppAlternativo()">3. ABRIR WHATSAPP</button>
+        </div>
+      </section>
 
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
@@ -502,9 +521,9 @@ body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#
     <script src="model/storage.js?v=1.6.18"></script>
     <script src="model/validators.js?v=1.6.18"></script>
     <script src="view/ui.js?v=1.6.18"></script>
-    <script src="presenter/api.js"></script>
+    <script src="presenter/api.js?v=1.6.19-share2"></script>
     <script src="shared/portal-preferencias.js?v=1.6.19-fix2"></script>
-<script src="presenter/index-presenter.js?v=1.6.19-mobile2"></script>
+<script src="presenter/index-presenter.js?v=1.6.19-share2"></script>
 <aside id="avisoNaoVendedor" hidden aria-labelledby="avisoNaoVendedorTitulo">
 <button type="button" class="aviso-fechar" aria-label="Fechar aviso e continuar" onclick="IndexPresenter.fecharAvisoNaoVendedor()">×</button>
 <div role="status" aria-live="polite">
@@ -514,5 +533,6 @@ body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#
 </div>
 <button id="avisoNaoVendedorContinuar" type="button" class="aviso-continuar" onclick="IndexPresenter.fecharAvisoNaoVendedor()">ENTENDI, CONTINUAR</button>
 </aside>
+<script src="shared/auto-update.js?v=1.6.19-auto1"></script>
 </body>
 </html>
