@@ -60,7 +60,7 @@ test('matrícula só retorna false quando o coletor confirma explicitamente inat
   assert.equal(tries,3);
 });
 test('ranking pode ser reconsultado sem mudar ofertas após um minuto',()=>{
-  const doc={hidden:false,getElementById:id=>({textContent:'',querySelector:()=>({textContent:''})}),querySelector:()=>({textContent:''})};
+  const doc={hidden:false,addEventListener(){},getElementById:id=>({textContent:'',querySelector:()=>({textContent:''})}),querySelector:()=>({textContent:''})};
   const win={matchMedia:()=>({matches:true})};
   const p=new Function('document','window','getHorarioBrasilia','formatarBrasilia','isOfertaAtiva',
     src('presenter/index-presenter.js')+';return IndexPresenter;')(doc,win,()=>new Date(),()=>'',()=>true);
