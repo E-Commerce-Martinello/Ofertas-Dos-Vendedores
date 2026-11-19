@@ -88,7 +88,8 @@ const TelefonePortal = {
   },
   receber(dados) {
     const resolve=this._pending.get(String(dados?.requestId||''));
-    if(resolve)resolve(dados.disponivel===false?null:{validado:dados.validado===true,solicitado:dados.solicitado===true});
+    if(resolve)resolve(dados.disponivel===false?null:{validado:dados.validado===true,
+      solicitado:typeof dados.solicitado==='boolean'?dados.solicitado:null});
   },
   async garantir(matricula) {
     const rubi=String(matricula||'').replace(/\D/g,'');
@@ -101,7 +102,10 @@ const TelefonePortal = {
       // mesmo após limpar cache ou acessar outro aparelho.
       this._marcar(rubi,'solicitado');return true;
     }
-    if(estado===null){
+    if(estado===null||estado.solicitado===null){
+      // Coletor indisponível ou versão antiga sem consulta de solicitações:
+      // nunca forçar um NOVO telefone sem poder verificar os pedidos existentes.
+      // O vendedor pode pedir o cadastro manualmente se precisar.
       // Queda do coletor ou bloqueio do JSONP não pode impedir um vendedor validado
       // de gerar ofertas. Em modo degradado, preservamos o fluxo anterior.
       console.warn('Consulta de telefone indisponível; oferta liberada sem validação.');
