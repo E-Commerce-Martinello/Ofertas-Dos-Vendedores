@@ -56,7 +56,7 @@ const CampanhasPortal = {
             url.searchParams.set('requestId',req);
             script=document.createElement('script');script.src=url.href;
             script.onerror=()=>limpar(null,true);
-            timer=setTimeout(()=>limpar(null,true),5000);
+            timer=setTimeout(()=>limpar(null,true),12000);
             document.head.appendChild(script);
         }).finally(()=>{this._pendente=null;});
         return this._pendente;

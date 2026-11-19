@@ -1,0 +1,21 @@
+name: Diagnosticar Apps Script COLETOR (público)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/check-coletor-live.cjs'
+      - '.github/workflows/diagnostico-coletor.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Consultar 3 endpoints públicos sem dados pessoais
+        run: node scripts/check-coletor-live.cjs
