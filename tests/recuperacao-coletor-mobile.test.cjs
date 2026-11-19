@@ -62,8 +62,8 @@ test('matrícula só retorna false quando o coletor confirma explicitamente inat
 test('ranking pode ser reconsultado sem mudar ofertas após um minuto',()=>{
   const doc={hidden:false,addEventListener(){},getElementById:id=>({textContent:'',querySelector:()=>({textContent:''})}),querySelector:()=>({textContent:''})};
   const win={matchMedia:()=>({matches:true})};
-  const p=new Function('document','window','getHorarioBrasilia','formatarBrasilia','isOfertaAtiva',
-    src('presenter/index-presenter.js')+';return IndexPresenter;')(doc,win,()=>new Date(),()=>'',()=>true);
+  const p=new Function('document','window','PortalPreferencias','getHorarioBrasilia','formatarBrasilia','isOfertaAtiva',
+    src('presenter/index-presenter.js')+';return IndexPresenter;')(doc,win,{destaque:()=>null},()=>new Date(),()=>'',()=>true);
   let calls=0;
   p.ofertas=[{id:'of_123'}];p._ativas=()=>p.ofertas;
   p._atualizarRanking=()=>{calls++;p._ultimaTentativaRanking=Date.now()};
