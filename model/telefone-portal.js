@@ -19,7 +19,7 @@ const TelefonePortal = {
     try {
       const dados=JSON.parse(localStorage.getItem(`martTelefoneStatus_${CONFIG.environment}_${rubi}`)||'null');
       if (dados && ['validado','solicitado'].includes(dados.tipo) &&
-          Date.now()-dados.quando < (dados.tipo==='validado' ? 7*86400000 : 86400000)) return dados.tipo;
+          Date.now()-dados.quando < (dados.tipo==='validado' ? 7*86400000 : 90*86400000)) return dados.tipo;
     } catch(_) {}
     return '';
   },
@@ -30,8 +30,8 @@ const TelefonePortal = {
     const url=String(CONFIG.portalEventsApiUrl||'').trim();
     return /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url) ? url : '';
   },
-  // Consulta por JSONP sem CORS. O servidor só devolve o booleano "validado".
-  // A query é executada UMA vez por matrícula neste navegador enquanto houver cache.
+  // Consulta pública por JSONP: retorna somente dois booleanos,
+  // validado e solicitado. Não lê nome ou número de telefone do vendedor.
   consultar(rubi) {
     const url=this._endpoint();
     if (!url) return Promise.resolve(null);
@@ -88,15 +88,24 @@ const TelefonePortal = {
   },
   receber(dados) {
     const resolve=this._pending.get(String(dados?.requestId||''));
-    if (resolve) resolve(dados.disponivel===false?null:dados.validado===true);
+    if(resolve)resolve(dados.disponivel===false?null:{validado:dados.validado===true,
+      solicitado:typeof dados.solicitado==='boolean'?dados.solicitado:null});
   },
   async garantir(matricula) {
     const rubi=String(matricula||'').replace(/\D/g,'');
     const cache=this._cache(rubi);
     if (cache==='validado' || cache==='solicitado') return true;
     const estado=await this.consultar(rubi);
-    if (estado===true) {this._marcar(rubi,'validado');return true;}
-    if (estado===null) {
+    if(estado?.validado===true){this._marcar(rubi,'validado');return true;}
+    if(estado?.solicitado===true){
+      // Pedido já existe na planilha: não exigir o telefone novamente,
+      // mesmo após limpar cache ou acessar outro aparelho.
+      this._marcar(rubi,'solicitado');return true;
+    }
+    if(estado===null||estado.solicitado===null){
+      // Coletor indisponível ou versão antiga sem consulta de solicitações:
+      // nunca forçar um NOVO telefone sem poder verificar os pedidos existentes.
+      // O vendedor pode pedir o cadastro manualmente se precisar.
       // Queda do coletor ou bloqueio do JSONP não pode impedir um vendedor validado
       // de gerar ofertas. Em modo degradado, preservamos o fluxo anterior.
       console.warn('Consulta de telefone indisponível; oferta liberada sem validação.');
@@ -151,6 +160,8 @@ const TelefonePortal = {
       // Sem CORS: resposta opaca indica despacho, não prova de gravação.
       await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
         body:campos.toString(),keepalive:true,cache:'no-store'});
+      // POST no-cors não confirma gravação; manter lembrança local temporária.
+      // O backend consulta pedidos por matrícula no próximo acesso.
       this._marcar(rubi,'solicitado');
       this.fechar(true);
     } catch(e) {
