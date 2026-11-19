@@ -77,7 +77,12 @@ const GerentesPresenter = {
       sel.add(new Option(titulo.charAt(0).toUpperCase()+titulo.slice(1),value));
     }
   },
+  atualizarAmbiente(){
+    const badge=this.el('gerentesAmbiente');
+    if(badge)badge.hidden=CONFIG.environment!=='TESTE';
+  },
   async init(){
+    this.atualizarAmbiente();
     this.carregarLogo();
     this.iniciarTema();
     this.iniciarMeses();

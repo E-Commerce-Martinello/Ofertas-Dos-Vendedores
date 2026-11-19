@@ -823,7 +823,7 @@
             <p id="importOfertasStatus" class="import-ofertas-status" role="status" aria-live="polite"></p>
             <div class="import-etapa" id="importOfertasPreviaCard" hidden>
               <div class="import-etapa-titulo"><span>03</span><strong>Revisar antes de importar</strong></div>
-              <p class="vendor-subtext">Produtos com campos faltantes ou link de busca podem entrar como <strong>rascunhos com pendências</strong>, para corrigir no site. Itens já cadastrados ou realmente duplicados serão ignorados.</p>
+              <p class="vendor-subtext">Produtos com campos faltantes podem entrar como <strong>rascunhos com pendências</strong>, para corrigir no site. Links de busca com filtros são permitidos. Itens já cadastrados ou realmente duplicados serão ignorados.</p>
               <div class="import-previa-table-wrap">
                 <table class="import-previa-table"><thead><tr><th>Linha</th><th>SKU</th><th>Título</th><th>Trecho do texto</th><th>Situação</th></tr></thead>
                   <tbody id="importOfertasPrevia"></tbody></table>
@@ -880,8 +880,9 @@
             </div>
 
             <div class="form-group">
-                <label>🔗 LINK DO PRODUTO</label>
-                <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/...">
+                <label for="linkProduto">🔗 LINK DO PRODUTO OU BUSCA</label>
+                <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/busca?busca=produto&preco=...">
+                 <small class="vendor-subtext">Aceita link direto ou página de busca da Martinello, inclusive com nome do produto, faixa de preço e outros filtros. Os filtros serão preservados no link compartilhado.</small>
             </div>
 
             <div class="form-group">
@@ -889,8 +890,9 @@
                 <input id="campanhaOferta" maxlength="60" placeholder="Vazio = usar campanha geral" autocomplete="off">
                 <small class="vendor-subtext">Quando preenchida, esta campanha substitui a geral apenas nesta oferta.</small>
             </div>
-            <div class="form-group"><label for="skuOferta">Código/SKU do produto (opcional)</label>
-                <input id="skuOferta" type="text" maxlength="40" placeholder="Ex.: 81367"></div>
+            <div class="form-group"><label for="skuOferta">Código/SKU de referência (opcional)</label>
+                <input id="skuOferta" type="text" maxlength="40" placeholder="Ex.: 81367">
+                 <small class="vendor-subtext">Usado para identificar ofertas e evitar duplicidades na importação. Não entra na UTM. Se o link de busca reúne várias cores ou SKUs, pode deixar vazio.</small></div>
             <div class="form-group">
                 <label class="admin-switch-label"><input id="rascunhoOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span><span class="admin-switch-description">Manter como rascunho (não aparece no portal)</span></label>
             </div>

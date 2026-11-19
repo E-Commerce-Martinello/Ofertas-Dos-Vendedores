@@ -317,11 +317,11 @@ const AdminPresenter = {
     _pendenciasRascunho(o){
         const p=[];
         if(!String(o.tituloPagina||'').trim() || /^Revisar título - linha \d+$/i.test(String(o.tituloPagina||'')))p.push('título');
-        let link=false,ehBusca=false;
+        let link=false;
         try{const u=new URL(String(o.linkProduto||''));link=u.protocol==='https:'&&
             ['martinello.com.br','www.martinello.com.br'].includes(u.hostname);
-            ehBusca=/^\/busca\/?$/i.test(u.pathname);}catch(_){}
-        if(!link||ehBusca)p.push('link direto do produto');
+            }catch(_){}
+        if(!link)p.push('link HTTPS da Martinello');
         if(!String(o.textoOferta||'').trim()||String(o.textoOferta||'').includes('\uFFFD'))p.push('texto');
         if(!o.dataInicio||!o.dataFim||!Number.isFinite(Date.parse(o.dataInicio))||
             !Number.isFinite(Date.parse(o.dataFim))||Date.parse(o.dataFim)<=Date.parse(o.dataInicio))p.push('datas');
@@ -581,7 +581,7 @@ const AdminPresenter = {
         const dados = {
             dataInicio:document.getElementById('dataInicio').value,
             dataFim:document.getElementById('dataFim').value,
-            linkProduto:document.getElementById('linkProduto').value,
+            linkProduto:document.getElementById('linkProduto').value.trim(),
             textoOferta:document.getElementById('textoOferta').value,
             tituloPagina:document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
             campanha:String(document.getElementById('campanhaOferta').value||'').trim().toLowerCase(),
@@ -612,8 +612,8 @@ const AdminPresenter = {
         if(!dados.rascunho && dados.textoOferta.includes('\uFFFD')){UI.erro('O texto contém caracteres de substituição (�); revise os emojis antes de publicar.');return;}
         if(!dados.rascunho){
             try{const u=new URL(dados.linkProduto);
-                if(!['martinello.com.br','www.martinello.com.br'].includes(u.hostname)||/^\/busca\/?$/i.test(u.pathname)){
-                    UI.erro('Antes de publicar, use o link direto do produto no site Martinello (não a página de busca).');return;
+                if(u.protocol!=='https:'||!['martinello.com.br','www.martinello.com.br'].includes(u.hostname)){
+                    UI.erro('Use um endereço HTTPS do site Martinello, seja um produto ou uma busca com filtros.');return;
                 }
             }catch(_){UI.erro('O link do produto é inválido.');return;}
             if(/^Revisar título - linha \d+$/i.test(dados.tituloPagina)){

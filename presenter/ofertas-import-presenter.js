@@ -99,8 +99,9 @@ const OfertasImportPresenter = {
             const u=new URL(raw);
             if(u.protocol==='https:'&&['www.martinello.com.br','martinello.com.br'].includes(u.hostname)){
                 busca=/^\/busca\/?$/i.test(u.pathname);
-                // Em /busca, o parâmetro ?busca= diferencia produtos. Nunca descartá-lo.
-                url=u.origin+u.pathname+(busca?u.search:'');
+                // Preserve pesquisa, filtros de preço, variações de cor/SKU e outras opções na URL.
+                // A geração do link de vendedor substitui apenas UTMs antigas.
+                url=u.href;
                 linkValido=true;
             }
         }catch(_){}
@@ -114,7 +115,6 @@ const OfertasImportPresenter = {
         const erros=[];
         if(!titulo)erros.push('Título ausente');
         if(!linkValido)erros.push('Link Martinello inválido');
-        if(busca)erros.push('Link de busca: substituir pelo link direto do produto');
         if(!texto)erros.push('Texto ausente');
         if(texto.includes('\uFFFD'))erros.push('Texto contém caractere inválido (�)');
         if(campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(campanha))erros.push('Campanha inválida');
@@ -122,7 +122,7 @@ const OfertasImportPresenter = {
         if(!inicioRaw || !fimRaw)erros.push('Datas ausentes');
         if(inicio && fim && inicio>fim)erros.push('Data final anterior à inicial');
         const criadas=[...(AdminPresenter.ofertas||[]),...(AdminPresenter.rascunhos||[])];
-        // Identidade: SKU e URL DIRETA. URL de busca nunca identifica um único produto.
+        // SKU opcional identifica um produto específico; uma busca pode abranger vários SKUs.
         const existente=criadas.some(o=>(sku&&String(o.sku||'')===sku)
             ||(url && linkValido && !busca && o.linkProduto===url));
         return {index:i+2,sku,titulo,url,texto,campanha,inicio:inicio||'',fim:fim||'',
