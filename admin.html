@@ -670,11 +670,13 @@
         }
 
     </style>
+<link rel="stylesheet" href="view/admin.css?v=1.6.19-utm2">
 </head>
 <body>
 <div class="admin-container">
     <div class="admin-atalhos">
         <a href="index.html" class="voltar-portal"><i class="fas fa-arrow-left"></i> VOLTAR AO PORTAL</a>
+        <a href="gerentes.html" class="voltar-portal" target="_blank" rel="noopener noreferrer"><i class="fas fa-user-tie" aria-hidden="true"></i> PORTAL DE GERENTES</a>
         <button type="button" class="tema-admin dark-mode-toggle" onclick="TEMA.toggle()" aria-label="Alternar modo claro ou escuro" title="Alternar tema"><i class="fas fa-moon"></i> <span>TEMA</span></button>
     </div>
 
@@ -693,7 +695,7 @@
     </div>
 
     <!-- PAINEL -->
-    <div id="painelAdmin" style="display:none;">
+    <div id="painelAdmin" style="display:none;"><p id="adminSyncStatus" class="admin-sync-bar" role="status" aria-live="polite">Conectando…</p>
 
         <!-- CABEÇALHO -->
         <div class="admin-card">
@@ -706,8 +708,8 @@
                     <button class="logout-button" onclick="logout()">SAIR</button>
                 </div>
                 <div class="toolbar">
-                    <button class="btn-nova" id="btnNovaOfertaTopo" onclick="mostrarNovaOferta()">
-                        <i class="fas fa-plus"></i> NOVA OFERTA
+                    <button class="btn-nova" id="btnNovaOfertaTopo" aria-label="Cadastrar nova oferta" title="Cadastrar nova oferta" onclick="mostrarNovaOferta()">
+                        <i class="fas fa-plus" aria-hidden="true"></i><span class="nova-oferta-texto"> Nova oferta</span>
                     </button>
                 </div>
             </div>
@@ -760,10 +762,31 @@
             <h2><i class="fas fa-bullhorn"></i> CAMPANHA GERAL</h2>
             <p class="vendor-subtext">Usada nas ofertas sem campanha individual. O identificador também integra a UTM gerada automaticamente.</p>
             <div class="campanha-geral-grid">
-                <div class="form-group"><label for="campanhaGeral">Identificador da campanha</label>
-                    <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"></div>
-
+                <div class="form-group">
+                    <label for="campanhaGeral">Nome da campanha geral</label>
+                    <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"
+                        oninput="EdicaoSegura.marcar('campanha'); CampanhasPresenter.prever()">
+                    <small class="vendor-subtext">Ofertas antigas e novas sem campanha individual sempre usarão este nome na utm_campaign.</small>
+                </div>
+                <div class="campanha-padrao-utm">
+                    <strong>Rastreio padrão dos links</strong>
+                    <code id="campanhaPreviewSource">utm_source=grupo_zap</code>
+                    <code id="campanhaPreviewCampaign">utm_campaign=NOME_DA_CAMPANHA</code>
+                    <code id="campanhaPreviewId">utm_id=vendedores_zap</code>
+                </div>
             </div>
+            <details id="campanhaOpcoesAvancadas" class="campanha-utm-avancada">
+                <summary><i class="fas fa-sliders-h" aria-hidden="true"></i> OPÇÕES AVANÇADAS DE RASTREIO</summary>
+                <p class="vendor-subtext">Altere apenas quando precisar mudar o identificador de origem ou de público no Analytics. Os valores são compartilhados com todas as ofertas.</p>
+                <div class="campanha-utm-campos">
+                    <div class="form-group"><label for="campanhaUtmSource">utm_source</label>
+                        <input id="campanhaUtmSource" value="grupo_zap" maxlength="60" autocomplete="off"
+                            oninput="EdicaoSegura.marcar('campanha'); CampanhasPresenter.prever()"></div>
+                    <div class="form-group"><label for="campanhaUtmId">utm_id</label>
+                        <input id="campanhaUtmId" value="vendedores_zap" maxlength="60" autocomplete="off"
+                            oninput="EdicaoSegura.marcar('campanha'); CampanhasPresenter.prever()"></div>
+                </div>
+            </details>
             <div class="vendor-actions" style="margin-top:10px">
                 <button type="button" id="btnSalvarCampanhas" class="btn-primary" onclick="CampanhasPresenter.salvar()" style="width:auto"><i class="fas fa-save"></i> SALVAR CAMPANHA</button>
                 <button type="button" class="btn-outline" onclick="CampanhasPresenter.carregar()" style="width:auto">ATUALIZAR</button>
@@ -869,9 +892,9 @@
             <div class="form-group"><label for="skuOferta">Código/SKU do produto (opcional)</label>
                 <input id="skuOferta" type="text" maxlength="40" placeholder="Ex.: 81367"></div>
             <div class="form-group">
-                <label><input id="rascunhoOferta" type="checkbox"> Manter como rascunho (não aparece no portal)</label>
+                <label class="admin-switch-label"><input id="rascunhoOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span><span class="admin-switch-description">Manter como rascunho (não aparece no portal)</span></label>
             </div>
-            <div class="form-group"><label><input id="destaqueDiaOferta" type="checkbox"> Destacar na vitrine</label>
+            <div class="form-group"><label class="admin-switch-label"><input id="destaqueDiaOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span><span class="admin-switch-description">Destacar na vitrine</span></label>
                 <small class="vendor-subtext">Uma oferta destacada aparece em tamanho maior acima das demais, somente durante o período programado.</small></div>
             <div class="row"><div class="form-group"><label for="destaqueInicioOferta">Início do destaque (opcional)</label>
                 <input type="datetime-local" id="destaqueInicioOferta"></div>
@@ -1007,7 +1030,7 @@
 
         <section id="abaLinks" class="aba-conteudo" style="display:none;">
           <div class="admin-card">
-            <div class="links-titulo-linha"><div><h2><i class="fas fa-link"></i> LINKS MARTINELLO</h2><p class="vendor-subtext">Resumo dos vendedores ativos, organizado por filial.</p></div><button class="btn-outline links-atualizar" type="button" onclick="VendedoresPresenter.atualizar()"><i class="fas fa-sync-alt"></i> ATUALIZAR</button></div>
+            <div class="links-titulo-linha"><div><h2><i class="fas fa-link"></i> LINKS MARTINELLO</h2><p class="vendor-subtext">Resumo dos vendedores ativos, organizado por filial.</p></div></div>
             <div class="dashboard-grade links-kpis">
               <div class="dashboard-metrica"><strong id="linksTotalAtivos">—</strong><span>VENDEDORES ATIVOS</span></div>
               <div class="dashboard-metrica"><strong id="linksTotalCadastrados">—</strong><span>CADASTRADOS (REDIRECIONAM)</span></div>
@@ -1062,11 +1085,7 @@
             <div class="admin-card">
                 <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
                 <p class="vendor-subtext">Consulte e edite os vendedores, telefones e situação no grupo em um só lugar.</p>
-                <div class="vendor-actions">
-                    <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
-                </div>
-                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Os vendedores serão carregados automaticamente após o acesso.</span></div>
-                <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
+                <div id="statusConexaoSheets" class="vendor-status error" role="alert" hidden style="display:none"></div>
             </div>
 
             <div class="admin-card" id="painelDadosVendedores" style="display:none;">
@@ -1093,6 +1112,63 @@
                   <div id="pedidosTelefoneStatus" class="vendor-last-update">Abra para consultar os pedidos.</div>
                   <div id="pedidosTelefoneLista" class="vendor-links-lista"></div>
                 </details>
+                <details class="vendor-tools" id="painelCadastroGerentes" ontoggle="if(this.open)CadastroGerentesPresenter.carregar()">
+                  <summary><span><i class="fas fa-user-tie"></i> CADASTRO DE GERENTES</span><span class="vendor-tools-help">Matrícula, nome, telefone e filial</span></summary>
+                  <p class="vendor-subtext">Cadastre os gerentes que poderão consultar os resultados da própria filial. O sistema encontra a filial pela matrícula informada.</p>
+                  <form id="cadastroGerentesForm" onsubmit="CadastroGerentesPresenter.salvar(event)" oninput="CadastroGerentesPresenter.sujo=true">
+                    <h3 id="cadastroGerenteTitulo">Cadastrar gerente</h3>
+                    <input id="cadastroGerenteRevision" type="hidden">
+                    <div class="cadastro-gerentes-form-grid">
+                      <div class="form-group">
+                        <label for="cadastroGerenteMatricula">Matrícula do gerente *</label>
+                        <input id="cadastroGerenteMatricula" type="text" inputmode="numeric" pattern="[0-9]{3,8}" maxlength="8" required placeholder="Ex.: 12345" autocomplete="off">
+                      </div>
+                      <div class="form-group">
+                        <label for="cadastroGerenteNome">Nome completo *</label>
+                        <input id="cadastroGerenteNome" type="text" maxlength="160" minlength="2" required placeholder="Nome do gerente" autocomplete="off">
+                      </div>
+                      <div class="form-group">
+                        <label for="cadastroGerenteTelefone">Telefone com DDD (opcional)</label>
+                        <input id="cadastroGerenteTelefone" type="tel" inputmode="numeric" maxlength="16" placeholder="(65) 9 1234-5678" oninput="CadastroGerentesPresenter.telefoneInput()" autocomplete="off">
+                      </div>
+                      <div class="form-group">
+                        <label for="cadastroGerenteFilial">Filial *</label>
+                        <select id="cadastroGerenteFilial" required><option value="">Selecione uma filial</option></select>
+                      </div>
+                    </div>
+                    <label class="admin-switch-label" for="cadastroGerenteAtivo">
+                      <input id="cadastroGerenteAtivo" class="admin-switch" type="checkbox" checked onchange="CadastroGerentesPresenter.estadoAtivo()">
+                      <span class="admin-switch-state"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span>
+                      <span id="cadastroGerenteEstado" class="admin-switch-description">ATIVO — acesso liberado</span>
+                    </label>
+                    <div class="cadastro-gerentes-acoes">
+                      <button id="cadastroGerenteSalvar" type="submit" class="btn-primary"><i class="fas fa-save"></i> SALVAR GERENTE</button>
+                      <button type="button" class="btn-outline" onclick="CadastroGerentesPresenter.novo()">NOVO / LIMPAR</button>
+                    </div>
+                  </form>
+                  <p id="cadastroGerentesStatus" class="vendor-status" role="status" aria-live="polite" hidden></p>
+                  <div class="form-group" style="margin-top:16px">
+                    <label for="cadastroGerentesBusca">Buscar gerente cadastrado</label>
+                    <input id="cadastroGerentesBusca" type="search" placeholder="Nome, matrícula, telefone ou filial" oninput="CadastroGerentesPresenter.renderizar()">
+                  </div>
+                  <div id="cadastroGerentesLista" class="cadastro-gerentes-lista"></div>
+                </details>
+                <details class="vendor-tools" id="painelSolicitacoesGerentes" ontoggle="if(this.open)GerentesSolicitacoesPresenter.carregar()">
+                  <summary><span><i class="fas fa-user-tie"></i> SOLICITAÇÕES DE GERENTES</span><span class="vendor-tools-help">Cadastros, telefones e contratos temporários</span></summary>
+                  <p class="vendor-subtext">Solicitações de gerentes autorizados. A aprovação não atualiza automaticamente o cadastro: revise o vendedor antes de concluir.</p>
+                  <div class="form-group" style="max-width:280px"><label for="solicitacoesGerentesFiltro">Situação</label>
+                    <select id="solicitacoesGerentesFiltro" onchange="GerentesSolicitacoesPresenter.renderizar()">
+                      <option value="ABERTAS">Solicitações abertas</option>
+                      <option value="CT_TEMPORARIO">CT Temporário</option>
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="CONCLUIDO">Concluído</option>
+                      <option value="REJEITADO">Rejeitado</option>
+                      <option value="TODAS">Todas</option>
+                    </select>
+                  </div>
+                  <p id="solicitacoesGerentesStatus" class="vendor-last-update" role="status">Abra esta área para consultar os pedidos.</p>
+                  <div id="solicitacoesGerentesLista" class="vendor-links-lista"></div>
+                </details>
                 <div class="vendor-section-head">
                     <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
                     <button class="vendor-quiet-btn" type="button" onclick="VendedoresPresenter.limparFiltros()"><i class="fas fa-undo-alt"></i> Limpar filtros</button>
@@ -1115,7 +1191,7 @@
                     </select>
                     <select id="filtroGrupoVendedor" aria-label="Filtrar participação no grupo" onchange="VendedoresPresenter.filtrar()">
                         <option value="">Todas as situações do grupo</option>
-                        <option value="grupo">No grupo</option>
+                        <option value="titularidade_pendente">No grupo — titularidade pendente</option><option value="grupo">No grupo</option>
                         <option value="fora">Fora do grupo</option>
                         <option value="conflito">Número duplicado</option>
                         <option value="revisar">Possível DDD diferente</option>
@@ -1131,7 +1207,7 @@
                         <button type="button" id="paginaProximaVendedores" onclick="VendedoresPresenter.mudarPagina(1)" disabled>MOSTRAR MAIS 15</button>
                     </div>
                 </div>
-                <p class="vendor-last-update" id="ultimaAtualizacaoVendedores"></p>
+
             </div>
 
         <details class="vendor-tools" id="gestaoParticipantesGrupo">
@@ -1161,7 +1237,7 @@
                     <p id="whatsappPreviaAvisos" class="vendor-subtext" style="color:#a35505"></p>
                     <button class="btn-primary" id="whatsappConfirmarImportacao" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
                 </div>
-                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button><button class="btn-outline" type="button" onclick="WhatsAppPresenter.normalizarExistentes()"><i class="fas fa-phone"></i> PADRONIZAR NÚMEROS JÁ IMPORTADOS</button></div>
+                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.normalizarExistentes()"><i class="fas fa-phone"></i> PADRONIZAR NÚMEROS JÁ IMPORTADOS</button></div>
                 <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
             </div>
             <div class="admin-card">
@@ -1254,6 +1330,17 @@
         </section><!-- /abaContatos -->
 
         <section id="abaConfiguracoes" class="aba-conteudo" style="display:none;">
+            <section class="admin-card" aria-labelledby="diagnosticoTitulo">
+              <h2 id="diagnosticoTitulo">Desempenho e uso da sessão</h2>
+              <p class="vendor-subtext">Medições locais desde que esta página foi aberta. Nenhuma consulta extra, dado pessoal ou envio de relatório automático. Recarregar a página reinicia as medições.</p>
+              <div id="diagnosticoMetricas" class="central-grid"></div>
+              <p id="diagnosticoEstado" class="vendor-subtext"></p>
+              <p id="diagnosticoTamanho" class="vendor-subtext"></p>
+              <div class="vendor-actions"><button type="button" class="btn-outline" onclick="DiagnosticoUso.medirTamanho()">MEDIR OFERTAS JÁ CARREGADAS</button><button type="button" class="btn-outline" onclick="DiagnosticoUso.exportar()">EXPORTAR DIAGNÓSTICO</button></div>
+              <p class="vendor-subtext">Os tempos incluem rede, gateway e servidor; não isolam o tempo do Sheets. Eventos Firebase incluem a entrega inicial e notificações locais/cache: não equivalem a downloads nem a gravações remotas. O intervalo entre conferências não mede o atraso exato entre dois administradores.</p>
+              <p class="vendor-subtext">Consumo real: no console Firebase, abra Realtime Database → Uso e confira downloads, armazenamento, conexões e carga dos últimos 30 dias. Este painel não tem acesso às cotas da conta.</p>
+            </section>
+
             <div class="admin-card">
                 <h2><i class="fas fa-sliders-h" style="color:#d0252a"></i> CENTRAL DE CONFIGURAÇÕES</h2>
                 <p class="vendor-subtext">Acesse as configurações existentes sem alterar a planilha nem o Firebase diretamente. Cada área mantém seu próprio botão de salvar.</p>
@@ -1283,7 +1370,7 @@
                     <p class="vendor-subtext">Essa preferência é local. Os dados e os cadastros continuam compartilhados no Google Sheets.</p>
                 </div>
             </div>
-                <div class="central-preferencias" id="segurancaSecao">
+                <div class="admin-card central-preferencias" id="segurancaSecao">
                     <h3 style="font-size:17px;margin:0 0 10px"><i class="fas fa-shield-alt"></i> Segurança, backups e auditoria</h3>
                     <p class="vendor-subtext">Backups manuais e histórico de operações. Exclusivo da conta principal. Os dados não são enviados ao GitHub nem armazenados no Cloudflare.</p>
                     <p id="segurancaAviso" class="vendor-subtext">Somente a conta principal pode consultar o histórico e gerar backups.</p>
@@ -1301,7 +1388,7 @@
                         <div class="vendor-table-wrap" style="max-height:390px;overflow:auto">
                             <table class="vendor-table" style="min-width:780px">
                                 <thead><tr><th>DATA (UTC)</th><th>ADMINISTRADOR</th><th>OPERAÇÃO</th><th>REFERÊNCIA</th><th>RESUMO</th><th>ORIGEM</th></tr></thead>
-                                <tbody id="segurancaAuditoriaLinhas"><tr><td colspan="5">Clique em Atualizar histórico.</td></tr></tbody>
+                                <tbody id="segurancaAuditoriaLinhas"><tr><td colspan="6">Clique em Atualizar histórico.</td></tr></tbody>
                             </table>
                         </div>
                         <p id="segurancaAuditoriaTotal" class="vendor-subtext"></p>
@@ -1339,23 +1426,12 @@
         <h2 id="tituloModalEditarVendedor"><i class="fas fa-user-edit"></i> EDITAR CADASTRO</h2>
         <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
-        <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><input type="text" id="editarFilialVendedor" maxlength="6" inputmode="numeric" pattern="[0-9]*" list="listaNumerosFiliais" oninput="VendedoresPresenter.atualizarLocalidadeFilial()"><datalist id="listaNumerosFiliais"></datalist><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
-        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" placeholder="(DDD) 9 1234-5678" oninput="VendedoresPresenter.aoAlterarTelefone()" onblur="VendedoresPresenter.formatarTelefoneDigitado()"></div>
-        <p class="vendor-subtext">O telefone acima é o contato legado preservado da base. Os novos campos permitem cadastrar dois números sem sobrescrever o legado.</p>
-        <div class="form-group"><label for="editarTelefoneProfissional">WhatsApp profissional</label>
-            <input type="tel" id="editarTelefoneProfissional" inputmode="tel" placeholder="(DDD) 9 1234-5678">
-            <select id="editarStatusProfissional"><option value="PENDENTE">Pendente</option><option value="VALIDADO">Validado pelo administrador</option></select>
-            <label><input type="checkbox" id="editarGrupoProfissional"> Vendedor declara participar do grupo</label></div>
-        <div class="form-group"><label for="editarTelefonePessoal">WhatsApp pessoal</label>
-            <input type="tel" id="editarTelefonePessoal" inputmode="tel" placeholder="(DDD) 9 1234-5678">
-            <select id="editarStatusPessoal"><option value="PENDENTE">Pendente</option><option value="VALIDADO">Validado pelo administrador</option></select>
-            <label><input type="checkbox" id="editarGrupoPessoal"> Vendedor declara participar do grupo</label></div>
-        <small class="vendor-subtext">A declaração do grupo NÃO comprova participação. Ela é verificada com a lista de participantes importada.</small>
-        <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
+        <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><select id="editarFilialVendedor" onchange="VendedoresPresenter.atualizarLocalidadeFilial()"><option value="">Selecione a filial</option></select><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
+        <div class="admin-history" id="telefoneHistoricoBloco" hidden style="display:none"><strong>Telefone histórico preservado</strong><p id="telefoneHistorico"></p><small>Tipo não confirmado. Copie somente após identificar a finalidade.</small><div><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Profissional')">Usar como profissional</button><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Pessoal')">Usar como pessoal</button></div></div><div class="admin-phone-grid"><div class="form-group"><label for="editarTelefoneProfissional">Telefone profissional <small>(opcional)</small></label><input type="tel" id="editarTelefoneProfissional"><small id="estadoTelefoneProfissional" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Profissional')">Confirmar titularidade manualmente</button></div><div class="form-group"><label for="editarTelefonePessoal">Telefone pessoal <small>(opcional)</small></label><input type="tel" id="editarTelefonePessoal"><small id="estadoTelefonePessoal" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Pessoal')">Confirmar titularidade manualmente</button></div></div><p class="vendor-subtext">Participação conferida pela última lista importada. Não é uma consulta em tempo real ao WhatsApp.</p>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
-        <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Cadastro ativo no painel</label>
+        <label class="admin-switch-label"><input type="checkbox" id="editarAtivoVendedor" checked><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">ATIVO</span><span class="switch-off">INATIVO</span></span><span class="admin-switch-description">Cadastro ativo no painel</span></label>
         <div class="form-group" style="margin-top:12px;"><label for="editarObservacoesVendedor">Observações</label><textarea id="editarObservacoesVendedor" rows="2" maxlength="500"></textarea></div>
-        <p class="vendor-subtext">As alterações serão gravadas diretamente na aba Vendedores. A matrícula não pode ser alterada em um cadastro existente. Ao trocar o telefone, a validação volta automaticamente para PENDENTE.</p>
+        <p class="vendor-subtext">Cadastro e telefones são salvos juntos. A matrícula permanece fixa e o telefone histórico é preservado.</p>
         <div class="vendor-modal-actions">
             <button type="button" class="btn-primary" id="btnSalvarVendedor" onclick="VendedoresPresenter.salvarEdicao()">SALVAR ALTERAÇÕES</button>
             <button type="button" class="btn-outline" onclick="VendedoresPresenter.fecharEdicao()">CANCELAR</button>
@@ -1391,36 +1467,42 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.18"></script>
+    <script src="shared/config.js?v=1.6.19"></script>
+    <script src="shared/telefones.js?v=1.6.19-fix1"></script>
     <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js?v=1.6.18"></script>
-    <script src="model/appearance.js?v=1.6.18"></script>
-    <script src="model/campanhas.js?v=1.6.18"></script>
-    <script src="model/link-track.js?v=1.6.18"></script>
-    <script src="model/analytics.js?v=1.6.18"></script>
+    <script src="model/firebase-config.js?v=1.6.19"></script>
+    <script src="model/appearance.js?v=1.6.19"></script>
+    <script src="model/campanhas.js?v=1.6.19-20261119b"></script>
+    <script src="model/link-track.js?v=1.6.19-utm2"></script>
+    <script src="model/analytics.js?v=1.6.19"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.18.3"></script>
-    <script src="model/validators.js?v=1.6.18"></script>
-    <script src="model/auth.js?v=1.6.18"></script>
-    <script src="view/ui.js?v=1.6.18"></script>
-    <script src="presenter/campanhas-presenter.js?v=1.6.18"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.18.3"></script>
-    <script src="presenter/ofertas-import-presenter.js?v=1.6.18.3"></script>
-    <script src="presenter/seguranca-presenter.js?v=1.6.18"></script>
-    <script src="model/filiais.js?v=1.6.18.1"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.18.1"></script>
-    <script src="model/google-sheets.js?v=1.6.18"></script>
+    <script src="model/diagnostico-uso.js?v=1.6.19-med1"></script>
+    <script src="model/storage.js?v=1.6.19-med1"></script>
+    <script src="model/validators.js?v=1.6.19"></script>
+    <script src="model/auth.js?v=1.6.19"></script>
+    <script src="view/ui.js?v=1.6.19"></script>
+    <script src="presenter/campanhas-presenter.js?v=1.6.19-20261119b"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.19"></script>
+    <script src="presenter/ofertas-import-presenter.js?v=1.6.19"></script>
+    <script src="presenter/seguranca-presenter.js?v=1.6.19"></script>
+    <script src="model/filiais.js?v=1.6.19-fix4"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.19"></script>
+    <script src="model/google-sheets.js?v=1.6.19-med1"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
-    <script src="model/planilha-loader.js?v=1.6.18"></script>
-    <script src="model/vendor-import.js?v=1.6.18"></script>
-    <script src="model/vendor-management.js?v=1.6.18"></script>
-    <script src="model/link-checker.js?v=1.6.18"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.18"></script>
-    <script src="model/whatsapp.js?v=1.6.18"></script>
-    <script src="presenter/pendencias-presenter.js?v=1.6.18"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.18"></script>
-    <script src="presenter/acessos-presenter.js?v=1.6.18"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.18"></script>
+    <script src="model/planilha-loader.js?v=1.6.19"></script>
+    <script src="model/vendor-import.js?v=1.6.19"></script>
+    <script src="model/vendor-management.js?v=1.6.19"></script>
+    <script src="model/link-checker.js?v=1.6.19"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.19-fix4"></script>
+    <script src="model/whatsapp.js?v=1.6.19"></script>
+    <script src="presenter/pendencias-presenter.js?v=1.6.19"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.19"></script>
+    <script src="presenter/acessos-presenter.js?v=1.6.19"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.19-utm2"></script>
     <script>FiliaisUI.ativarBuscas();</script>
+<script src="view/admin-components.js?v=1.6.19"></script>
+    <script src="presenter/gerentes-solicitacoes-presenter.js?v=1.6.19-ger5"></script>
+    <script src="presenter/gerentes-cadastro-presenter.js?v=1.6.19-ger5"></script>
+    <script src="model/admin-sync.js?v=1.6.19-med1"></script>
 </body>
 </html>

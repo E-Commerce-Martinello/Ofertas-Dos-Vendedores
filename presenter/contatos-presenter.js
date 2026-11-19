@@ -22,6 +22,8 @@ const ContatosPresenter = {
     this._statusConfig('Carregando convite salvo…');
     try {
       const dados = await GoogleSheetsService.listarConfigContatos();
+      if(EdicaoSegura.sujo('convite'))return;
+      this.revision=dados.revision;
       const link = document.getElementById('contatosLinkGrupo');
       const modelo = document.getElementById('contatosConviteModelo');
       if (link) link.value = dados.linkGrupo || '';
@@ -46,7 +48,11 @@ const ContatosPresenter = {
     if (btn) btn.disabled = true;
     this._statusConfig('Salvando no Google Sheets…');
     try {
-      await GoogleSheetsService.salvarConfigContatos(link, mensagem);
+      AdminSync.exigirEdicao();
+      if(EdicaoSegura.conflitos.has('convite'))throw new Error('O convite mudou. Guarde seu texto e recarregue para revisar.');
+      const salvo=await GoogleSheetsService.salvarConfigContatos(link, mensagem,this.revision);
+      this.revision=salvo.revision;
+      if(document.getElementById('contatosLinkGrupo').value.trim()===link&&document.getElementById('contatosConviteModelo').value.trim()===mensagem)EdicaoSegura.limpar('convite');
       this.configCarregada = true;
       this._statusConfig('Convite salvo. Será carregado automaticamente nos próximos acessos.');
       this.renderizarFila();
@@ -265,7 +271,11 @@ const ContatosPresenter = {
     if (!v || !oferta || !this._candidatos().some(x=>this._rubi(x.matricula)===rubi)) {
       UI.erro('Atualize a base e confira a oferta e o telefone antes de continuar.');return;
     }
-    const msgs=this._mensagens(v,oferta);
+    let msgs;
+    try{
+      if(!CampanhasPortal.carregada)throw new Error('Configuração de campanhas ainda não carregada. Confira a campanha geral no administrador.');
+      msgs=this._mensagens(v,oferta);
+    }catch(e){UI.erro(e.message||'Não foi possível preparar o link de rastreio.');return;}
     if (!msgs) { UI.erro('Telefone não está válido.');return; }
     if (acao==='nativo') {
       const arquivo = this.bannerCache?.arquivo;
