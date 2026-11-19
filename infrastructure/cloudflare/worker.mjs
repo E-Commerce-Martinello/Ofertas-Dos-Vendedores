@@ -39,7 +39,7 @@ async function receberJsonGoogle(upstream, campos) {
     redirect: 'manual',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
     body: campos.toString()
-  });
+  }).catch(() => { throw new Error('FALHA_POST_GOOGLE'); });
 
   let resposta = inicio;
   if ([301, 302, 303].includes(inicio.status)) {
@@ -54,7 +54,8 @@ async function receberJsonGoogle(upstream, campos) {
     // Isso não executa novamente o doPost nem duplica alterações.
     for (const espera of [0, 500, 1400, 2800]) {
       if (espera) await pausa(espera);
-      resposta = await fetch(url.href, { method: 'GET', redirect: 'manual' });
+      resposta = await fetch(url.href, { method: 'GET', redirect: 'manual' })
+        .catch(() => { throw new Error('FALHA_GET_REDIRECIONAMENTO'); });
       if (resposta.status !== 404) break;
     }
   }
@@ -62,8 +63,17 @@ async function receberJsonGoogle(upstream, campos) {
   if (!resposta.ok) {
     throw new Error('HTTP_APPS_SCRIPT_' + resposta.status);
   }
-  try { return await resposta.json(); }
-  catch (_) { throw new Error('RESPOSTA_NAO_JSON'); }
+  try { return JSON.parse(await resposta.text()); }
+  catch (_) {
+    const tipo = String(resposta.headers.get('content-type') || '').toLowerCase();
+    let host = '';
+    try { host = new URL(resposta.url).hostname; } catch (_) {}
+    const origem = host === 'script.googleusercontent.com' ? 'REDIRECIONAMENTO_GOOGLE'
+      : host === 'script.google.com' ? 'APPS_SCRIPT' : 'OUTRO';
+    const formato = tipo.includes('html') ? 'HTML' : tipo.includes('json') ? 'JSON' : 'OUTRO';
+    // Nunca inclui a resposta, identificadores de planilha, token ou URL do Google.
+    throw new Error('RESPOSTA_NAO_JSON_' + origem + '_' + formato);
+  }
 }
 
 export default {
@@ -124,8 +134,14 @@ export default {
       }
       return retorno(json);
     } catch (erro) {
-      if (String(erro.message).startsWith('HTTP_APPS_SCRIPT_')) {
-        const status = String(erro.message).slice('HTTP_APPS_SCRIPT_'.length);
+      const motivo = String(erro && erro.message || 'DESCONHECIDO');
+      if (motivo.startsWith('RESPOSTA_NAO_JSON_') ||
+          motivo === 'FALHA_POST_GOOGLE' || motivo === 'FALHA_GET_REDIRECIONAMENTO' ||
+          motivo === 'REDIRECT_INVALIDO') {
+        return retorno({ erro: 'Diagnóstico: ' + motivo }, 502);
+      }
+      if (motivo.startsWith('HTTP_APPS_SCRIPT_')) {
+        const status = motivo.slice('HTTP_APPS_SCRIPT_'.length);
         return retorno({ erro: `O Google devolveu HTTP ${status}. Confira a implantação do Apps Script e os registros de execução.` }, 502);
       }
       return retorno({ erro: 'Não foi possível obter a resposta JSON do Apps Script. Confira o Code.gs publicado e as execuções.' }, 502);
